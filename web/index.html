@@ -1,0 +1,444 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>EC-Cam</title>
+  <link rel="manifest" href="/manifest.json">
+  <link rel="icon" href="/img/favicon.png">
+  <link rel="apple-touch-icon" href="/img/pwa-192.png">
+  <meta name="theme-color" content="#121614">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="EC-Cam">
+  <script src="/pwa.js?v=1" defer></script>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --bg: #121614; --surface: #1b201d; --surface-2: #252c28; --surface-3: #313a35;
+      --border: #2e3732; --muted: #9aa6a0; --text: #f3f5f4;
+      --accent: #F07C1E; --accent-strong: #ff9a45; --success: #6fcf97;
+      --warning: #f2c94c; --danger: #8e2f25; --shadow: 0 14px 30px rgba(0, 0, 0, .35);
+    }
+    *, *::before, *::after { box-sizing: border-box; }
+    html { min-width: 320px; background: var(--bg); }
+    body { min-height: 100vh; margin: 0; background: var(--bg); color: var(--text); }
+    button, input, select { font: inherit; }
+    button { border: 0; border-radius: 10px; padding: 10px 13px; background: var(--accent); color: #fff; font-weight: 600; cursor: pointer; transition: background .16s ease, transform .16s ease, opacity .16s ease; }
+    button:hover:not(:disabled) { filter: brightness(1.12); transform: translateY(-1px); }
+    button:focus-visible, input:focus-visible, select:focus-visible, .preview:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+    button.secondary { background: var(--surface-2); color: var(--text); } button.secondary:hover:not(:disabled) { background: var(--accent-strong); }
+    button.ghost { background: var(--surface); border: 1px solid var(--border); color: var(--text); }
+    button.danger { background: var(--danger); border: 1px solid var(--danger); color: #fff; }
+    button:disabled { cursor: wait; opacity: .58; transform: none; }
+    .hidden { display: none !important; }
+    .app-header { position: sticky; top: 0; z-index: 20; display: flex; align-items: center; justify-content: space-between; gap: 18px; min-height: 78px; padding: 13px clamp(16px, 4vw, 44px); border-bottom: 1px solid var(--border); background: var(--surface); }
+    .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+    .brand-icon { width: 48px; height: 48px; border-radius: 14px; flex: 0 0 auto; object-fit: cover; box-shadow: 0 8px 22px var(--bg); }
+    .brand-copy { min-width: 0; } h1 { margin: 0; overflow: hidden; font-size: clamp(1rem, 2vw, 1.25rem); line-height: 1.2; text-overflow: ellipsis; white-space: nowrap; }
+    .brand-subtitle { margin-top: 4px; color: var(--muted); font-size: .78rem; }
+    #account { display: flex; align-items: center; justify-content: flex-end; gap: 9px; flex-wrap: wrap; }
+    #state { display: inline-flex; align-items: center; gap: 7px; color: var(--muted); font-size: .84rem; white-space: nowrap; }
+    #state::before { width: 8px; height: 8px; border-radius: 50%; background: var(--warning); content: ""; }
+    #state.ok::before { background: var(--success); } #state.bad::before { background: var(--danger); }
+    .header-actions { display: flex; gap: 8px; } .header-actions button { margin: 0; padding: 8px 10px; font-size: .85rem; }
+    main { width: min(1700px, 100%); margin: 0 auto; padding: clamp(18px, 3vw, 34px) clamp(16px, 4vw, 44px) 44px; }
+    .toolbar { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 18px; }
+    .toolbar h2 { margin: 0; font-size: clamp(1.2rem, 2.5vw, 1.6rem); } .toolbar p { margin: 5px 0 0; color: var(--muted); font-size: .88rem; }
+    .toolbar-actions { display: flex; gap: 8px; } .toolbar-actions button { margin: 0; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 350px), 1fr)); gap: 20px; align-items: start; }
+    .card { position: relative; overflow: visible; border: 1px solid var(--border); border-radius: 18px; background: var(--surface); box-shadow: var(--shadow); }
+    .card.movement-open { z-index: 20; }
+    .card:focus-within { border-color: var(--accent); }
+    .preview { position: relative; display: grid; place-items: center; aspect-ratio: 16 / 9; overflow: hidden; border-radius: 17px 17px 0 0; background: var(--bg); color: var(--muted); text-align: center; cursor: zoom-in; }
+    .preview img, .preview video { width: 100%; height: 100%; display: block; object-fit: contain; } .preview::after { position: absolute; inset: 0; pointer-events: none; border: 1px solid var(--border); content: ""; }
+    .audio-controls { position: absolute; right: 12px; bottom: 12px; z-index: 4; display: flex; align-items: center; gap: 7px; } .audio-toggle { position: static; margin: 0; padding: 7px 10px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface); color: var(--text); font-size: .78rem; } .audio-toggle.active { background: var(--accent); } .audio-toggle:disabled { cursor: wait; opacity: .75; } .audio-volume { display: none; width: 82px !important; height: 28px; margin: 0; padding: 0 !important; accent-color: var(--accent); } .audio-controls.active .audio-volume { display: block; } .live-audio { display: none; }
+    .preview-status { position: absolute; inset: auto 12px 12px 12px; z-index: 2; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 9px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg); color: var(--text); font-size: .84rem; }
+    .preview-status.loading::before { width: 13px; height: 13px; border: 2px solid var(--muted); border-top-color: var(--text); border-radius: 50%; animation: spin .8s linear infinite; content: ""; }
+    .preview-status.error { color: var(--text); } .preview-status.error::before { content: "!"; width: 18px; height: 18px; display: inline-grid; place-items: center; border-radius: 50%; background: var(--surface-2); color: var(--text); font-weight: 800; }
+    .privacy-overlay { display: grid; gap: 6px; place-items: center; padding: 20px; color: var(--warning); } .privacy-overlay strong { color: var(--text); }
+    .badge-row { position: absolute; top: 12px; left: 12px; right: 12px; z-index: 3; display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; pointer-events: none; }
+    .badge { display: inline-flex; align-items: center; gap: 6px; padding: 6px 9px; border: 1px solid var(--border); border-radius: 999px; background: var(--bg); color: var(--text); font-size: .73rem; font-weight: 700; }
+    .badge::before { width: 7px; height: 7px; border-radius: 50%; background: var(--warning); content: ""; } .badge.privacy::before { background: var(--warning); }
+    .card-body { padding: 16px 17px 18px; border-radius: 0 0 17px 17px; } .card-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+    .name { margin: 0; font-size: 1.06rem; font-weight: 750; } .meta { margin-top: 5px; color: var(--muted); font-size: .82rem; line-height: 1.4; }
+    .result { min-height: 1.2em; } .ok { color: var(--success); } .bad { color: var(--text); } .privacy-on { color: var(--warning); }
+    .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 15px; padding-top: 14px; border-top: 1px solid var(--border); } .actions > button { margin: 0; flex: 1 1 auto; min-width: 125px; padding: 9px 10px; font-size: .84rem; }
+    .movement-control { position: relative; flex: 0 0 auto; }
+    .movement-toggle { width: auto; min-width: 125px !important; padding: 9px 10px !important; font-size: .84rem; font-weight: inherit; white-space: nowrap; }
+    .movement-unavailable { flex: 1 1 100%; }
+    .movement-panel { position: absolute; top: calc(100% + 10px); right: 0; z-index: 10; width: min(252px, calc(100vw - 32px)); min-height: 0; margin: 0; padding: 15px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface-2); box-shadow: 0 14px 28px var(--bg); }
+    .movement-panel.opens-up { top: auto; bottom: calc(100% + 10px); }
+    .movement-panel.detached { position: fixed; top: 50%; right: auto; bottom: auto; left: 50%; z-index: 1000; width: min(252px, calc(100vw - 32px)); max-height: calc(100vh - 32px); overflow-y: auto; transform: translate(-50%, -50%); }
+    .ptz-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 14px; padding-bottom: 12px; border-bottom: 1px solid var(--border); } .ptz-toolbar .meta { margin: 0; font-size: .8rem; font-weight: 700; } .step-select { width: 84px; min-width: 84px; padding: 6px 8px; border-radius: 7px; font-size: .8rem; }
+    .ptz { display: grid; grid-template-columns: repeat(3, 40px); gap: 5px; margin: 0 auto; justify-content: center; } .ptz button { width: 40px; height: 40px; margin: 0; padding: 0; border: 1px solid var(--border); border-radius: 9px; background: var(--surface-3); font-size: 1rem; }
+    .ptz button:hover:not(:disabled) { background: var(--accent); color: #fff; } .ptz .up { grid-column: 2; grid-row: 1; } .ptz .left { grid-column: 1; grid-row: 2; } .ptz .center { grid-column: 2; grid-row: 2; } .ptz .right { grid-column: 3; grid-row: 2; } .ptz .down { grid-column: 2; grid-row: 3; }
+    .ptz .center { background: var(--surface-2); color: var(--muted); cursor: default; } .ptz-result { min-height: 1.2em; margin: 13px 0 0; text-align: center; } .retry-button { margin: 0; padding: 7px 10px; background: var(--surface-2); color: var(--text); font-size: .8rem; }
+    .commands-handle { display: none; position: absolute; left: 50%; bottom: 18px; z-index: 7; transform: translateX(-50%); margin: 0; padding: 11px 24px; border: 1px solid var(--accent); border-radius: 999px; background: var(--bg); box-shadow: 0 8px 22px var(--bg); font-weight: 700; }
+    .commands-handle:hover:not(:disabled) { transform: translateX(-50%) translateY(-1px); }
+    .card:fullscreen, .card:-webkit-full-screen, .card.is-fullscreen { width: 100vw; height: 100vh; overflow: hidden; border: 0; border-radius: 0; background: var(--bg); }
+    .card:fullscreen .preview, .card:-webkit-full-screen .preview, .card.is-fullscreen .preview { width: 100%; height: 100%; min-height: 0; aspect-ratio: auto; cursor: default; }
+    .card:fullscreen .card-body, .card:-webkit-full-screen .card-body, .card.is-fullscreen .card-body { position: absolute; right: 0; bottom: 0; left: 0; z-index: 6; max-height: min(72vh, 650px); overflow-y: auto; padding: 18px clamp(16px, 4vw, 44px) 74px; border-top: 1px solid var(--border); background: var(--surface); box-shadow: 0 -18px 36px var(--bg); transform: translateY(105%); transition: transform .22s ease; }
+    .card:fullscreen .movement-control, .card:-webkit-full-screen .movement-control, .card.is-fullscreen .movement-control { flex-basis: 100%; }
+    .card:fullscreen .movement-panel, .card:-webkit-full-screen .movement-panel, .card.is-fullscreen .movement-panel { position: static; width: 100%; min-height: 0; margin-top: 10px; box-shadow: none; }
+    .card:fullscreen.commands-open .card-body, .card:-webkit-full-screen.commands-open .card-body, .card.is-fullscreen.commands-open .card-body { transform: translateY(0); }
+    .card:fullscreen .commands-handle, .card:-webkit-full-screen .commands-handle, .card.is-fullscreen .commands-handle { display: block; }
+    /* Keep the fullscreen controls handle anchored to the viewport center.
+       The drawer scrollbar/content must not change its containing block. */
+    .card:fullscreen .commands-handle, .card:-webkit-full-screen .commands-handle, .card.is-fullscreen .commands-handle { position: fixed; left: 50%; right: auto; bottom: 18px; width: max-content; }
+    .card:fullscreen .badge-row, .card:-webkit-full-screen .badge-row, .card.is-fullscreen .badge-row { top: 18px; left: 20px; right: 20px; }
+    .login-wrap { min-height: calc(100vh - 78px); display: grid; place-items: center; padding: 28px 16px; } .login-card { width: min(440px, 100%); padding: clamp(22px, 5vw, 34px); border: 1px solid var(--border); border-radius: 20px; background: var(--surface); box-shadow: var(--shadow); }
+    .login-brand { display: block; width: 92px; height: 92px; margin: 0 auto 18px; border-radius: 25px; object-fit: cover; } h2 { margin: 0; font-size: 1.25rem; }
+    .login-card p { margin: 8px 0 22px; color: var(--muted); line-height: 1.5; } label { display: block; margin: 15px 0 7px; color: var(--text); font-size: .86rem; font-weight: 650; }
+    input, select { width: 100%; border: 1px solid var(--border); border-radius: 9px; padding: 11px 12px; background: var(--bg); color: var(--text); } .login-card form button, .login-card > div button { width: 100%; margin-top: 18px; }
+    .login-error, .login-info { min-height: 1.35em; margin-top: 13px; font-size: .87rem; } .login-error { color: var(--text); } .login-info { color: var(--success); }
+    .empty-state { padding: 40px 20px; border: 1px dashed var(--border); border-radius: 16px; color: var(--muted); text-align: center; } .empty-state strong { display: block; color: var(--text); }
+    .recordings-modal { position: fixed; inset: 0; z-index: 50; display: flex; align-items: stretch; justify-content: center; padding: clamp(12px, 3vw, 34px); background: rgba(0, 0, 0, .65); }
+    .recordings-panel { display: flex; flex-direction: column; width: min(1120px, 100%); max-height: 100%; overflow: hidden; border: 1px solid var(--border); border-radius: 20px; background: var(--bg); box-shadow: var(--shadow); }
+    .recordings-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 18px 22px; border-bottom: 1px solid var(--border); background: var(--surface); }
+    .recordings-heading h2 { margin: 0; font-size: 1.2rem; } .recordings-heading p { margin: 5px 0 0; color: var(--muted); font-size: .84rem; }
+    .recordings-body { overflow: auto; padding: 22px; } .recordings-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 18px; }
+    .recordings-toolbar h3 { margin: 0; font-size: 1rem; } .recordings-toolbar p { margin: 4px 0 0; color: var(--muted); font-size: .82rem; }
+    .recording-days { display: flex; flex-wrap: wrap; gap: 8px; } .recording-day { min-width: 108px; padding: 9px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); text-align: left; }
+    .recording-day.active { border-color: var(--text); background: var(--surface-3); font-weight: 700; } .recording-day small { display: block; margin-top: 3px; color: var(--muted); font-size: .72rem; font-weight: 400; }
+    .timeline-card { margin-top: 20px; padding: 18px; border: 1px solid var(--border); border-radius: 16px; background: var(--surface); }
+    .timeline-topline { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 18px; } .timeline-topline strong { font-size: .92rem; } .timeline-topline span { color: var(--muted); font-size: .8rem; }
+    .timeline-hours { display: flex; justify-content: space-between; margin: 0 2px 7px; color: var(--muted); font-size: .7rem; } .timeline-track { position: relative; height: 86px; overflow: hidden; border: 1px solid var(--border); border-radius: 10px; background: repeating-linear-gradient(90deg, transparent 0, transparent calc(25% - 1px), var(--border) 25%); }
+    .timeline-segment { position: absolute; top: 11px; bottom: 11px; min-width: 6px; margin: 0; padding: 0; border: 2px solid rgba(63, 56, 52, .2); border-radius: 5px; background: var(--accent); cursor: pointer; } .timeline-segment.event { background: var(--accent); } .timeline-segment.continuous { background: var(--surface-3); }
+    .timeline-segment:hover, .timeline-segment.selected { z-index: 2; border-color: var(--text); box-shadow: 0 0 0 2px var(--bg); } .timeline-segment.event:hover:not(:disabled) { background: var(--accent-strong); } .timeline-segment.continuous:hover:not(:disabled) { background: var(--accent); color: var(--text); } .timeline-empty { display: grid; place-items: center; height: 86px; color: var(--muted); font-size: .84rem; }
+    .timeline-legend { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 12px; color: var(--muted); font-size: .76rem; } .timeline-legend span::before { display: inline-block; width: 10px; height: 10px; margin-right: 5px; border-radius: 3px; background: var(--accent); content: ''; vertical-align: -1px; } .timeline-legend .continuous::before { background: var(--surface-3); }
+    .timeline-list-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-top: 18px; color: var(--muted); font-size: .76rem; } .timeline-list-heading strong { color: var(--text); font-size: .84rem; } .timeline-segment-list { display: grid; gap: 6px; max-height: 164px; margin-top: 8px; overflow-y: auto; padding-right: 3px; }
+    .timeline-segment-item { display: grid; grid-template-columns: minmax(142px, 1.2fr) minmax(130px, 1fr) auto; align-items: center; gap: 12px; min-height: 48px; padding: 8px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg); color: var(--text); text-align: left; } .timeline-segment-item:hover, .timeline-segment-item.selected { border-color: var(--text); background: var(--surface-3); } .timeline-segment-item small { color: var(--muted); font-size: .76rem; } .timeline-segment-item .segment-kind { display: inline-flex; align-items: center; gap: 6px; } .timeline-segment-item .segment-kind::before { width: 9px; height: 9px; border-radius: 3px; background: var(--accent); content: ''; } .timeline-segment-item.continuous .segment-kind::before { background: var(--surface-3); }
+    .recording-selection { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; margin-top: 16px; padding: 12px 14px; border-radius: 10px; background: var(--surface-2); color: var(--muted); font-size: .84rem; } .recording-selection strong { color: var(--text); } .recording-selection button { flex: 0 0 auto; padding: 8px 12px; font-size: .8rem; } .recording-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+    .play-recording-button { position: relative; overflow: hidden; isolation: isolate; } .play-recording-button::after { position: absolute; z-index: -1; top: 0; bottom: 0; left: 0; width: var(--recording-progress, 0%); background: rgba(255, 255, 255, .28); content: ''; transition: width .35s ease; } .play-recording-button.is-preparing { cursor: wait; }
+    .recording-player { margin-bottom: 18px; overflow: hidden; border: 1px solid var(--border); border-radius: 12px; background: #000; } .recording-player video { display: block; width: 100%; max-height: min(52vh, 520px); background: #000; }
+    .timeline-loading { display: flex; align-items: center; gap: 9px; margin-bottom: 14px; padding: 12px 14px; border-radius: 10px; background: var(--surface-2); color: var(--muted); font-size: .84rem; } .timeline-loading::before, .recordings-status.loading::before { display: inline-block; width: 13px; height: 13px; flex: 0 0 auto; border: 2px solid var(--border); border-top-color: var(--text); border-radius: 50%; animation: spin .8s linear infinite; content: ''; }
+    .recordings-status { display: flex; align-items: center; gap: 8px; min-height: 1.3em; margin: 0 0 14px; color: var(--muted); font-size: .84rem; } .recordings-status.bad { color: var(--text); }
+    .header-actions button.icon-only { min-width: 38px; }
+    .preview .audio-controls { top: 12px; bottom: auto; }
+    .movement-panel { right: auto; left: 0; }
+    .user-chip { color: var(--muted); font-size: .82rem; white-space: nowrap; } .user-chip strong { color: var(--text); }
+    .viewer-note { padding: 14px; border-radius: 12px; background: var(--bg); color: var(--muted); line-height: 1.5; }
+    .app-modal { position: fixed; inset: 0; z-index: 60; display: flex; align-items: flex-start; justify-content: center; padding: clamp(12px, 6vh, 70px) 16px; overflow-y: auto; background: rgba(0, 0, 0, .65); }
+    .app-modal-panel { width: min(560px, 100%); border: 1px solid var(--border); border-radius: 18px; background: var(--surface); box-shadow: var(--shadow); }
+    .app-modal-panel header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 20px; border-bottom: 1px solid var(--border); } .app-modal-panel h2 { font-size: 1.1rem; }
+    .app-modal-body { padding: 18px 20px 22px; } .app-modal-body form { display: grid; gap: 8px; } .app-modal-body label { margin: 6px 0 0; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; } .form-row label { margin-top: 6px; }
+    .user-list { display: grid; gap: 8px; margin-bottom: 18px; } .user-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg); }
+    .user-row .who { min-width: 0; overflow: hidden; text-overflow: ellipsis; } .user-row .who small { display: block; color: var(--muted); }
+    .user-row .row-actions { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; } .user-row .row-actions button { padding: 6px 9px; font-size: .78rem; }
+    .form-msg { min-height: 1.3em; margin-top: 8px; font-size: .86rem; } .form-msg.bad { color: #ff8a7a; } .form-msg.ok { color: var(--success); }
+    .app-footer { padding: 0 16px 28px; color: var(--muted); font-size: .75rem; text-align: center; } .app-footer a { color: var(--muted); }
+    @media (max-width: 520px) { .form-row { grid-template-columns: 1fr; } }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @media (max-width: 720px) { .app-header { align-items: flex-start; } #account { align-items: flex-end; flex-direction: column; gap: 7px; } .toolbar { align-items: flex-start; flex-direction: column; } .toolbar-actions { width: 100%; } .toolbar-actions button { flex: 1; } .timeline-segment-item { grid-template-columns: 1fr auto; } .timeline-segment-item .segment-kind { grid-column: 1 / -1; grid-row: 2; } .recording-selection { align-items: stretch; flex-direction: column; } .recording-actions { justify-content: stretch; } .recording-actions button { flex: 1; } }
+    @media (max-width: 480px) { .brand-subtitle { display: none; } .brand-icon { width: 40px; height: 40px; border-radius: 12px; } .header-actions button { width: 38px; overflow: hidden; padding: 8px 0; font-size: 0; } .header-actions button::first-letter { font-size: 1rem; } .card-body { padding: 14px; } }
+  </style>
+</head>
+<body>
+  <header class="app-header">
+    <div class="brand"><img class="brand-icon" src="/img/pwa-192.png" alt=""><div class="brand-copy"><h1>EC-Cam</h1><div class="brand-subtitle">Tus cámaras Tapo en vivo</div></div></div>
+    <div id="account"><div id="state" aria-live="polite">Conectando…</div><span id="userChip" class="user-chip"></span><div class="header-actions"><button class="ghost" type="button" data-instalar data-instalar-ios="En Safari toca Compartir y luego «Agregar a pantalla de inicio»." style="display:none">⤓ Instalar</button><button id="refreshButton" class="ghost icon-only hidden" type="button" title="Actualizar cámaras" aria-label="Actualizar cámaras">↻</button><button id="usersButton" class="ghost hidden" type="button" title="Usuarios de EC-Cam">👥 Usuarios</button><button id="accountButton" class="ghost" type="button" title="Mi cuenta">⚙ Cuenta</button><button id="appLogoutButton" class="secondary" type="button" title="Cerrar sesión de EC-Cam">🚪 Salir</button></div></div>
+  </header>
+  <section id="loginView" class="login-wrap"><div class="login-card">
+    <img class="login-brand" src="/img/pwa-192.png" alt=""><div id="viewerWait" class="hidden"><h2>Cuenta Tapo sin conectar</h2><p class="viewer-note">Un administrador de EC-Cam debe conectar la cuenta Tapo antes de que puedas ver las cámaras.</p><button id="viewerRetryButton" type="button">Reintentar</button></div><div id="credentialsView"><h2>Conectar cuenta Tapo</h2><p>Escribe el correo y la contraseña de tu cuenta Tapo. La contraseña no se guarda; EC-Cam guarda solo la sesión en la PC servidor.</p>
+      <form id="loginForm"><label for="username">Correo de la cuenta Tapo</label><input id="username" type="email" autocomplete="username" required><label for="password">Contraseña de Tapo</label><input id="password" type="password" autocomplete="current-password" required><button id="loginButton" type="submit">Conectar</button></form><div id="loginError" class="login-error" aria-live="polite"></div>
+    </div>
+    <div id="mfaView" class="hidden"><h2>Verificación en dos pasos</h2><p>Completa la verificación que pide tu cuenta Tapo.</p><label for="mfaType">Método de verificación</label><select id="mfaType"></select><button id="requestMfaButton" type="button">Enviar código</button><label for="mfaCode">Código de verificación</label><input id="mfaCode" inputmode="numeric" autocomplete="one-time-code"><button id="verifyMfaButton" type="button" disabled>Verificar código</button><button id="backLoginButton" class="secondary" type="button">Volver</button><div id="mfaInfo" class="login-info" aria-live="polite"></div><div id="mfaError" class="login-error" aria-live="polite"></div></div>
+  </div></section>
+  <main id="appView" class="hidden"><div class="toolbar"><div><h2>Tus cámaras</h2><p id="cameraSummary">Cargando cámaras…</p></div><div class="toolbar-actions"><button id="refreshMainButton" class="secondary" type="button">↻ Actualizar</button><button id="logoutButton" class="danger hidden" type="button" title="Olvidar la sesión de Tapo en el servidor">Desconectar Tapo</button></div></div><div id="grid" class="grid" aria-live="polite"></div></main>
+  <footer class="app-footer">EC-Cam · motor de video basado en <a href="https://github.com/filirnd/topo" target="_blank" rel="noopener">Topo</a> (licencia MIT)</footer>
+  <section id="recordingsModal" class="recordings-modal hidden" role="dialog" aria-modal="true" aria-labelledby="recordingsTitle"><div class="recordings-panel"><header class="recordings-header"><div class="recordings-heading"><h2 id="recordingsTitle">Grabaciones</h2><p id="recordingsSubtitle">Línea de tiempo de la memoria SD</p></div><button id="closeRecordingsButton" class="ghost" type="button">Cerrar</button></header><div class="recordings-body"><div class="recordings-toolbar"><div><h3>Días disponibles</h3><p>Las horas están en la zona horaria de la cámara.</p></div><button id="refreshRecordingsButton" class="secondary" type="button">↻ Actualizar</button></div><div id="recordingsStatus" class="recordings-status" aria-live="polite">Cargando grabaciones…</div><div id="recordingDays" class="recording-days"></div><div id="timelineCard" class="timeline-card hidden"><div id="timelineLoading" class="timeline-loading hidden" aria-live="polite">Cargando línea de tiempo…</div><div class="timeline-topline"><strong id="timelineDate">Línea de tiempo</strong><span id="timelineSummary"></span></div><div class="timeline-hours"><span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span><span>24:00</span></div><div id="timelineTrack" class="timeline-track"></div><div class="timeline-legend"><span>Movimiento / evento</span><span class="continuous">Grabación continua</span></div><div class="timeline-list-heading"><strong>Segmentos grabados</strong><span>Usa la lista cuando los segmentos están muy juntos.</span></div><div id="timelineSegmentList" class="timeline-segment-list"></div><div id="recordingSelection" class="recording-selection">Elige un segmento para ver su hora y duración.</div><div id="recordingPlayerWrap" class="recording-player hidden"><video id="recordingPlayer" controls preload="metadata"></video></div></div></div></div></section>
+  <section id="usersModal" class="app-modal hidden" role="dialog" aria-modal="true" aria-labelledby="usersTitle"><div class="app-modal-panel"><header><h2 id="usersTitle">Usuarios de EC-Cam</h2><button class="ghost" type="button" data-close-modal>Cerrar</button></header><div class="app-modal-body"><div id="userList" class="user-list"></div><h3 style="margin:0 0 6px;font-size:.95rem">Agregar usuario</h3><form id="addUserForm" autocomplete="off"><div class="form-row"><div><label for="newUserName">Usuario</label><input id="newUserName" autocapitalize="none" spellcheck="false" required></div><div><label for="newUserRole">Rol</label><select id="newUserRole"><option value="viewer">Visor (solo ver)</option><option value="admin">Administrador</option></select></div></div><label for="newUserPass">Contraseña (mín. 8)</label><input id="newUserPass" type="password" autocomplete="new-password" minlength="8" required><button type="submit">Agregar</button></form><div id="usersMsg" class="form-msg" aria-live="polite"></div><p class="meta" style="margin-top:14px">Visor: ve en vivo, oye audio, mueve la cámara y revisa grabaciones. Administrador: además conecta la cuenta Tapo, activa privacidad y administra usuarios.</p></div></div></section>
+  <section id="accountModal" class="app-modal hidden" role="dialog" aria-modal="true" aria-labelledby="accountTitle"><div class="app-modal-panel"><header><h2 id="accountTitle">Mi cuenta</h2><button class="ghost" type="button" data-close-modal>Cerrar</button></header><div class="app-modal-body"><p class="meta" id="accountInfo" style="margin:0 0 10px"></p><form id="passwordForm"><input type="text" id="accountUserHidden" autocomplete="username" hidden><label for="currentPass">Contraseña actual</label><input id="currentPass" type="password" autocomplete="current-password" required><label for="newPass">Nueva contraseña (mín. 8)</label><input id="newPass" type="password" autocomplete="new-password" minlength="8" required><label for="newPass2">Repite la nueva contraseña</label><input id="newPass2" type="password" autocomplete="new-password" minlength="8" required><button type="submit">Cambiar contraseña</button></form><div id="accountMsg" class="form-msg" aria-live="polite"></div></div></div></section>
+  <script>
+    const grid = document.querySelector('#grid'), state = document.querySelector('#state'), loginView = document.querySelector('#loginView'), appView = document.querySelector('#appView'), credentialsView = document.querySelector('#credentialsView'), mfaView = document.querySelector('#mfaView'), loginForm = document.querySelector('#loginForm'), loginButton = document.querySelector('#loginButton'), loginError = document.querySelector('#loginError'), mfaType = document.querySelector('#mfaType'), mfaCode = document.querySelector('#mfaCode'), requestMfaButton = document.querySelector('#requestMfaButton'), verifyMfaButton = document.querySelector('#verifyMfaButton'), backLoginButton = document.querySelector('#backLoginButton'), mfaInfo = document.querySelector('#mfaInfo'), mfaError = document.querySelector('#mfaError'), logoutButton = document.querySelector('#logoutButton'), refreshButton = document.querySelector('#refreshButton'), refreshMainButton = document.querySelector('#refreshMainButton'), cameraSummary = document.querySelector('#cameraSummary'), recordingsModal = document.querySelector('#recordingsModal'), closeRecordingsButton = document.querySelector('#closeRecordingsButton'), refreshRecordingsButton = document.querySelector('#refreshRecordingsButton'), recordingsTitle = document.querySelector('#recordingsTitle'), recordingsSubtitle = document.querySelector('#recordingsSubtitle'), recordingsStatus = document.querySelector('#recordingsStatus'), recordingDays = document.querySelector('#recordingDays'), timelineCard = document.querySelector('#timelineCard'), timelineLoading = document.querySelector('#timelineLoading'), timelineDate = document.querySelector('#timelineDate'), timelineSummary = document.querySelector('#timelineSummary'), timelineTrack = document.querySelector('#timelineTrack'), timelineSegmentList = document.querySelector('#timelineSegmentList'), recordingSelection = document.querySelector('#recordingSelection'), recordingPlayerWrap = document.querySelector('#recordingPlayerWrap'), recordingPlayer = document.querySelector('#recordingPlayer');
+    let appUser = {user: '', role: 'viewer'}; const isAdmin = () => appUser.role === 'admin';
+    const STEP_VALUES = {small: 5, medium: 10, large: 20};
+    function esc(value) { return String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+    function methodName(value) { return Number(value) === 1 ? 'Notificación en la app Tapo' : 'Correo electrónico'; }
+    async function api(path, options = {}) { const opts = {credentials: 'same-origin', ...options}; if ((opts.method || 'GET').toUpperCase() === 'POST') { opts.headers = {'Content-Type': 'application/json', ...(opts.headers || {})}; if (opts.body === undefined) opts.body = '{}'; } const response = await fetch(path, opts); let data = {}; try { data = await response.json(); } catch (_) {} if (response.status === 401 && data.app_auth === false) { location.replace('/login'); throw new Error('Sesión de EC-Cam terminada.'); } if (!response.ok) throw new Error(translateError(data.error) || `Error HTTP ${response.status}`); return data; }
+    function translateError(message) { const map = {'login required': 'login required', 'email and password are required': 'Escribe el correo y la contraseña.', 'no pending MFA login': 'No hay una verificación pendiente; vuelve a iniciar sesión.', 'request the MFA code first': 'Primero solicita el código.', 'MFA method is not available': 'Ese método de verificación no está disponible.', 'invalid camera': 'Cámara inválida.', 'camera did not provide a video frame': 'La cámara no envió video.'}; return map[message] || message; }
+    function setState(text, tone = '') { state.textContent = text; state.className = tone; }
+    function showLogin() { loginView.classList.remove('hidden'); appView.classList.add('hidden'); logoutButton.classList.add('hidden'); refreshButton.classList.add('hidden'); setState('Tapo sin conectar', 'bad'); grid.innerHTML = ''; closeRecordings?.(); const admin = isAdmin(); document.querySelector('#viewerWait').classList.toggle('hidden', admin); credentialsView.classList.toggle('hidden', !admin); if (!admin) mfaView.classList.add('hidden'); }
+    function showCredentials() { credentialsView.classList.remove('hidden'); mfaView.classList.add('hidden'); loginError.textContent = ''; mfaError.textContent = ''; mfaInfo.textContent = ''; }
+    function showMfa(types) { const valid = (types || []).map(Number).filter(value => value === 1 || value === 2); mfaType.innerHTML = valid.map(value => `<option value="${value}">${methodName(value)}</option>`).join(''); credentialsView.classList.add('hidden'); mfaView.classList.remove('hidden'); mfaCode.value = ''; verifyMfaButton.disabled = true; mfaInfo.textContent = 'Elige un método y solicita la verificación.'; mfaError.textContent = ''; }
+    function showApp() { loginView.classList.add('hidden'); appView.classList.remove('hidden'); logoutButton.classList.toggle('hidden', !isAdmin()); refreshButton.classList.remove('hidden'); }
+    function statusBadge(camera) { if (camera.privacy === true) return '<div class="badge-row"><span class="badge privacy">Privacidad</span></div>'; return '<div class="badge-row"><span class="badge">En vivo</span></div>'; }
+    function previewMarkup(camera) { if (camera.privacy === true) return '<div class="privacy-overlay"><strong>Modo privacidad activado</strong><span>Video y audio en pausa</span></div>'; return `<video class="live-native-video" autoplay muted playsinline preload="auto" src="/stream/${encodeURIComponent(camera.id)}.mp4?native=${Date.now()}" aria-label="En vivo ${esc(camera.name)}"></video><audio class="live-audio" preload="none"></audio><div class="audio-controls"><input class="audio-volume" type="range" min="0" max="1" step="0.05" value="1" aria-label="Volumen del audio"><button class="audio-toggle" type="button" aria-pressed="false">🔈 Activar audio</button></div><div class="preview-status loading">Conectando con la cámara…</div><div class="preview-status error hidden">Video no disponible <button class="retry-button" type="button">Reintentar</button></div>`; }
+    function ptzMarkup(camera) { if (camera.ptz !== true) return `<span class="meta movement-unavailable">${esc(camera.ptz_error ? 'Movimiento no disponible.' : 'Esta cámara no se mueve.')}</span>`; const disabled = camera.privacy === true ? 'disabled' : ''; const panelId = `movement-${esc(camera.id)}`; return `<div class="movement-control"><button class="movement-toggle secondary" type="button" aria-expanded="false" aria-controls="${panelId}">✥ Mover</button><div id="${panelId}" class="movement-panel hidden"><div class="ptz-toolbar"><span class="meta">Paso</span><select class="step-select" aria-label="Paso del movimiento"><option value="small">5°</option><option value="medium" selected>10°</option><option value="large">20°</option></select></div><div class="ptz" aria-label="Controles de movimiento"><span></span><button class="ptz-button up" data-x="0" data-y="1" ${disabled} title="Arriba" aria-label="Arriba">▲</button><span></span><button class="ptz-button left" data-x="-1" data-y="0" ${disabled} title="Izquierda" aria-label="Izquierda">◀</button><button class="ptz-button center" data-x="0" data-y="0" disabled title="Posición actual" aria-label="Posición actual">•</button><button class="ptz-button right" data-x="1" data-y="0" ${disabled} title="Derecha" aria-label="Derecha">▶</button><span></span><button class="ptz-button down" data-x="0" data-y="-1" ${disabled} title="Abajo" aria-label="Abajo">▼</button><span></span></div><div class="meta ptz-result" aria-live="polite">Listo · paso 10°</div></div></div>`; }
+    function cardMarkup(camera) { const privacyText = camera.privacy === true ? 'Privacidad activada.' : (camera.privacy === false ? 'Privacidad desactivada.' : 'Estado de privacidad no disponible.'); const privacyClass = camera.privacy === true ? ' privacy-on' : ''; const privacyDisabled = camera.privacy === null ? 'disabled' : ''; const privacyHidden = isAdmin() ? '' : ' hidden'; return `<article class="card" data-id="${esc(camera.id)}" data-name="${esc(camera.name)}"><div class="preview" tabindex="0" role="button" aria-label="Abrir ${esc(camera.name)} en pantalla completa">${statusBadge(camera)}${previewMarkup(camera)}</div><div class="card-body"><div class="card-heading"><div><h3 class="name">${esc(camera.name)}</h3><div class="meta">${esc(camera.model || 'Cámara')} · vía nube Tapo</div></div></div><div class="meta result" aria-live="polite">Lista</div><div class="meta privacy-result${privacyClass}" aria-live="polite">${esc(privacyText)}</div><div class="actions"><button class="relay-button" type="button" data-id="${esc(camera.id)}">Probar conexión</button><button class="secondary privacy-button${privacyHidden}" type="button" data-id="${esc(camera.id)}" data-enabled="${camera.privacy !== true}" ${privacyDisabled}>${camera.privacy === true ? 'Quitar privacidad' : 'Activar privacidad'}</button><button class="secondary fullscreen-button" type="button">⛶ Pantalla completa</button><button class="secondary recordings-button" type="button" data-id="${esc(camera.id)}" data-name="${esc(camera.name)}">▶ Grabaciones</button>${ptzMarkup(camera)}</div></div><button class="commands-handle" type="button" aria-expanded="false">Controles</button></article>`; }
+    function bindStream(card) {
+      const preview = card.querySelector('.preview'), video = preview.querySelector('.live-native-video'), audio = preview.querySelector('.live-audio'), audioControls = preview.querySelector('.audio-controls'), audioButton = preview.querySelector('.audio-toggle'), volume = preview.querySelector('.audio-volume');
+      if (!video) return;
+      const loading = preview.querySelector('.preview-status.loading'), error = preview.querySelector('.preview-status.error');
+      let loadingTimer, reconnectTimer, reconnectAttempt = 0;
+      const streamUrl = () => `/stream/${encodeURIComponent(card.dataset.id)}.mp4?native=${Date.now()}`;
+      const hideLoading = () => loading?.classList.add('hidden');
+      const scheduleLoadingFallback = () => { clearTimeout(loadingTimer); loadingTimer = setTimeout(hideLoading, 3500); };
+      const setStreamState = failed => { if (failed) { clearTimeout(loadingTimer); hideLoading(); } else scheduleLoadingFallback(); error?.classList.toggle('hidden', !failed); };
+      const ready = () => { clearTimeout(loadingTimer); hideLoading(); setStreamState(false); };
+      const scheduleReconnect = reason => {
+        if (reconnectTimer) return;
+        const delay = Math.min(1000 * (2 ** reconnectAttempt), 10000);
+        reconnectAttempt = Math.min(reconnectAttempt + 1, 4);
+        if (reason) { error?.classList.remove('hidden'); error?.firstChild && (error.firstChild.textContent = reason); }
+        reconnectTimer = setTimeout(() => {
+          reconnectTimer = null;
+          video.pause();
+          video.removeAttribute('src');
+          video.load();
+          video.src = streamUrl();
+          video.load();
+          loading?.classList.remove('hidden');
+          setStreamState(false);
+          const playback = video.play();
+          if (playback) playback.catch(() => {});
+        }, delay);
+      };
+      const handleError = () => { setStreamState(true); scheduleReconnect('Video interrumpido. Reconectando…'); };
+      video.addEventListener('loadedmetadata', ready); video.addEventListener('loadeddata', ready); video.addEventListener('canplay', ready); video.addEventListener('playing', () => { ready(); reconnectAttempt = 0; }); video.addEventListener('error', handleError); video.addEventListener('ended', () => scheduleReconnect('El video terminó. Reconectando…'));
+      scheduleLoadingFallback();
+      preview.querySelector('.retry-button')?.addEventListener('click', event => { event.stopPropagation(); reconnectAttempt = 0; scheduleReconnect('Reintentando…'); });
+      if (audio && audioButton && audioControls && volume) { audio.volume = Number(volume.value); const stopAudio = () => { audio.pause(); audio.removeAttribute('src'); audio.load(); audioButton.dataset.audioOn = 'false'; audioButton.setAttribute('aria-pressed', 'false'); audioButton.classList.remove('active'); audioControls.classList.remove('active'); audioButton.disabled = false; audioButton.textContent = '🔈 Activar audio'; }; const startAudio = () => { audioButton.disabled = true; audioButton.textContent = 'Conectando audio…'; audio.volume = Number(volume.value); audio.src = `/audio/${encodeURIComponent(card.dataset.id)}.mp3?stream=${Date.now()}`; audio.load(); const playback = audio.play(); if (playback) playback.catch(() => { stopAudio(); audioButton.textContent = '🔈 Activar audio'; }); }; audioButton.addEventListener('click', event => { event.stopPropagation(); if (audioButton.dataset.audioOn === 'true') stopAudio(); else startAudio(); }); volume.addEventListener('click', event => event.stopPropagation()); volume.addEventListener('input', () => { audio.volume = Number(volume.value); }); audio.addEventListener('playing', () => { audioButton.disabled = false; audioButton.dataset.audioOn = 'true'; audioButton.setAttribute('aria-pressed', 'true'); audioButton.classList.add('active'); audioButton.textContent = '🔇 Silenciar'; }); audio.addEventListener('error', () => { if (audioButton.dataset.audioOn !== 'true') stopAudio(); }); }
+    }
+    document.addEventListener('click', event => { const button = event.target.closest('.audio-toggle'); if (!button) return; const controls = button.closest('.audio-controls'); if (!controls) return; controls.classList.toggle('active', button.dataset.audioOn !== 'true'); }, true);
+    const recordingsState = {id: null, name: '', dates: [], date: '', preparedClipKey: '', preparedVideoUrl: ''};
+    const monthNames = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+    function displayDate(value) { const text = String(value || ''); if (!/^\d{8}$/.test(text)) return text; return `${text.slice(6, 8)} ${monthNames[Number(text.slice(4, 6)) - 1] || ''} ${text.slice(0, 4)}`; }
+    function displayTime(value) { const text = String(value || ''); const match = text.match(/T(\d{2}:\d{2}(?::\d{2})?)/); return match ? match[1] : 'Hora desconocida'; }
+    function recordingType(value) { return Number(value) === 1 ? 'Grabación continua' : 'Movimiento / evento'; }
+    function renderRecordingDays(data) { recordingsState.dates = Array.isArray(data.dates) ? data.dates.slice().sort() : []; recordingDays.innerHTML = recordingsState.dates.length ? recordingsState.dates.map(date => `<button class="recording-day${date === recordingsState.date ? ' active' : ''}" type="button" data-date="${esc(date)}">${esc(displayDate(date))}<small>Ver línea de tiempo</small></button>`).join('') : '<div class="empty-state">No hay grabaciones en estos días.</div>'; recordingDays.querySelectorAll('.recording-day').forEach(button => button.addEventListener('click', () => loadRecordingsDay(button.dataset.date))); }
+    function recordingClipKey(clip) { return `${Number(clip.start)}:${Number(clip.end)}`; }
+    function downloadPreparedRecording(clip, videoUrl) {
+      const anchor = document.createElement('a');
+      anchor.href = `${videoUrl}?download=1`;
+      anchor.download = `eccam-grabacion-${recordingsState.date || 'clip'}-${displayTime(clip.start_local).replaceAll(':', '-')}.mp4`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      recordingsStatus.className = 'recordings-status';
+      recordingsStatus.textContent = 'Descarga iniciada.';
+    }
+    function selectRecording(clip, segment, listItem) {
+      if (recordingsState.preparedClipKey !== recordingClipKey(clip)) {
+        recordingsState.preparedClipKey = '';
+        recordingsState.preparedVideoUrl = '';
+      }
+      timelineTrack.querySelectorAll('.timeline-segment').forEach(item => item.classList.toggle('selected', item === segment));
+      timelineSegmentList.querySelectorAll('.timeline-segment-item').forEach(item => item.classList.toggle('selected', item === listItem));
+      const duration = Math.max(1, Number(clip.duration) || Number(clip.end) - Number(clip.start));
+      recordingSelection.innerHTML = `<span><strong>${esc(displayTime(clip.start_local))} – ${esc(displayTime(clip.end_local))}</strong> · ${esc(recordingType(clip.type))} · ${duration}s</span><div class="recording-actions"><button type="button" class="recording-action play-recording-button">▶ Reproducir</button><button type="button" class="recording-action secondary download-recording-button">⤓ Descargar</button></div>`;
+      recordingSelection.querySelector('.play-recording-button').addEventListener('click', () => prepareRecording(clip, 'play'));
+      recordingSelection.querySelector('.download-recording-button').addEventListener('click', () => prepareRecording(clip, 'download'));
+    }
+    function renderTimeline(data) {
+      timelineLoading.classList.add('hidden');
+      timelineDate.textContent = `${displayDate(data.date)} · ${data.timezone || 'hora de la cámara'}`;
+      const clips = Array.isArray(data.clips) ? data.clips : [];
+      timelineSummary.textContent = `${clips.length} ${clips.length === 1 ? 'segmento' : 'segmentos'}`;
+      timelineTrack.innerHTML = '';
+      timelineSegmentList.innerHTML = '';
+      recordingsState.preparedClipKey = '';
+      recordingsState.preparedVideoUrl = '';
+      recordingPlayer.pause();
+      recordingPlayer.removeAttribute('src');
+      recordingPlayer.load();
+      recordingPlayerWrap.classList.add('hidden');
+      recordingSelection.textContent = 'Elige un segmento para ver su hora y duración.';
+      if (!clips.length) {
+        timelineTrack.innerHTML = '<div class="timeline-empty">No hay segmentos este día.</div>';
+        timelineSegmentList.innerHTML = '<div class="meta">No hay segmentos grabados.</div>';
+        timelineCard.classList.remove('hidden');
+        return;
+      }
+      const range = Math.max(1, Number(data.day_end) - Number(data.day_start));
+      clips.forEach((clip, index) => {
+        const start = Math.max(Number(data.day_start), Number(clip.start));
+        const end = Math.min(Number(data.day_end), Number(clip.end));
+        if (end <= start) return;
+        const kind = Number(clip.type) === 1 ? 'continuous' : 'event';
+        const label = `${displayTime(clip.start_local)} – ${displayTime(clip.end_local)} · ${recordingType(clip.type)}`;
+        const segment = document.createElement('button');
+        segment.type = 'button';
+        segment.className = `timeline-segment ${kind}`;
+        segment.style.left = `${((start - Number(data.day_start)) / range) * 100}%`;
+        segment.style.width = `${Math.max(((end - start) / range) * 100, .25)}%`;
+        segment.title = label;
+        segment.dataset.index = String(index);
+        const listItem = document.createElement('button');
+        listItem.type = 'button';
+        listItem.className = `timeline-segment-item ${kind}`;
+        listItem.dataset.start = String(start);
+        listItem.innerHTML = `<strong>${esc(displayTime(clip.start_local))} – ${esc(displayTime(clip.end_local))}</strong><span class="segment-kind">${esc(recordingType(clip.type))}</span><small>${Math.max(1, Number(clip.duration) || end - start)}s</small>`;
+        const select = () => selectRecording(clip, segment, listItem);
+        segment.addEventListener('click', select);
+        listItem.addEventListener('click', select);
+        timelineTrack.appendChild(segment);
+        timelineSegmentList.appendChild(listItem);
+      });
+      [...timelineSegmentList.children]
+        .sort((left, right) => Number(right.dataset.start) - Number(left.dataset.start))
+        .forEach(item => timelineSegmentList.appendChild(item));
+      timelineCard.classList.remove('hidden');
+    }
+    async function prepareRecording(clip, mode) {
+      const isDownload = mode === 'download';
+      const clipKey = recordingClipKey(clip);
+      if (isDownload && recordingsState.preparedClipKey === clipKey && recordingsState.preparedVideoUrl) {
+        downloadPreparedRecording(clip, recordingsState.preparedVideoUrl);
+        return;
+      }
+      if (!isDownload && recordingsState.preparedClipKey === clipKey && recordingsState.preparedVideoUrl) {
+        recordingPlayer.src = recordingsState.preparedVideoUrl;
+        recordingPlayerWrap.classList.remove('hidden');
+        recordingPlayer.load();
+        recordingPlayer.play().catch(() => {});
+        recordingsStatus.className = 'recordings-status';
+        recordingsStatus.textContent = 'Grabación lista.';
+        return;
+      }
+      const button = recordingSelection.querySelector(isDownload ? '.download-recording-button' : '.play-recording-button');
+      const actionButtons = [...recordingSelection.querySelectorAll('.recording-action')];
+      const end = Number(clip.end);
+      const resetButton = () => {
+        if (!button?.isConnected) return;
+        button.disabled = false;
+        button.classList.remove('is-preparing');
+        button.style.removeProperty('--recording-progress');
+        button.textContent = isDownload ? '⤓ Descargar' : '▶ Reproducir';
+      };
+      const setProgress = job => {
+        const progress = Math.max(1, Math.min(99, Number(job?.progress) || 1));
+        if (button?.isConnected) {
+          button.style.setProperty('--recording-progress', `${progress}%`);
+          button.textContent = `Preparando… ${progress}%`;
+        }
+        recordingsStatus.className = 'recordings-status loading';
+        recordingsStatus.textContent = `${job?.message || (isDownload ? 'Preparando descarga…' : 'Preparando grabación…')} ${progress}%`;
+      };
+      actionButtons.forEach(action => { action.disabled = true; });
+      if (button) {
+        button.classList.add('is-preparing');
+        button.style.setProperty('--recording-progress', '1%');
+        button.textContent = 'Preparando… 1%';
+      }
+      recordingsStatus.className = 'recordings-status loading';
+      recordingsStatus.textContent = isDownload ? 'Preparando descarga… 1%' : 'Preparando grabación… 1%';
+      try {
+        const created = await api(`/api/cameras/${encodeURIComponent(recordingsState.id)}/recordings/play`, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({start: Number(clip.start), end})});
+        let job;
+        const maxAttempts = Math.max(300, Math.ceil((Math.max(Number(clip.end) - Number(clip.start), 1) + 300) / 0.4));
+        for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+          await new Promise(resolve => setTimeout(resolve, 400));
+          job = await api(`/api/recording-jobs/${encodeURIComponent(created.job_id)}`);
+          if (job.status === 'ready' || job.status === 'error') break;
+          setProgress(job);
+        }
+        if (!job || job.status !== 'ready') throw new Error(job?.error || 'Se agotó el tiempo al preparar la grabación.');
+        recordingsState.preparedClipKey = clipKey;
+        recordingsState.preparedVideoUrl = job.video_url;
+        if (isDownload) {
+          downloadPreparedRecording(clip, job.video_url);
+        } else {
+          recordingPlayer.src = job.video_url;
+          recordingPlayerWrap.classList.remove('hidden');
+          recordingPlayer.load();
+          recordingsStatus.className = 'recordings-status';
+          recordingsStatus.textContent = 'Grabación lista.';
+          recordingPlayer.play().catch(() => {});
+        }
+      } catch (error) {
+        recordingsStatus.className = 'recordings-status bad';
+        recordingsState.preparedClipKey = '';
+        recordingsState.preparedVideoUrl = '';
+        recordingsStatus.textContent = error.message || (isDownload ? 'No se pudo descargar la grabación.' : 'No se pudo preparar la grabación.');
+      } finally {
+        resetButton();
+        actionButtons.forEach(action => { if (action.isConnected) action.disabled = false; });
+      }
+    }
+    async function loadRecordingsDay(date) { recordingsState.date = date; timelineCard.classList.remove('hidden'); timelineLoading.classList.remove('hidden'); recordingsStatus.className = 'recordings-status loading'; recordingsStatus.textContent = `Cargando ${displayDate(date)}…`; recordingDays.querySelectorAll('.recording-day').forEach(button => button.classList.toggle('active', button.dataset.date === date)); try { const data = await api(`/api/cameras/${encodeURIComponent(recordingsState.id)}/recordings?date=${encodeURIComponent(date)}`); renderTimeline(data); recordingsStatus.className = 'recordings-status'; recordingsStatus.textContent = `${data.clips?.length || 0} segmentos · ${data.timezone || 'hora de la cámara'}`; } catch (error) { timelineLoading.classList.add('hidden'); recordingsStatus.className = 'recordings-status bad'; recordingsStatus.textContent = error.message || 'No se pudieron cargar las grabaciones.'; } }
+    async function loadRecordingDays() { recordingsStatus.className = 'recordings-status loading'; recordingsStatus.textContent = 'Buscando días con grabaciones…'; timelineCard.classList.add('hidden'); try { const data = await api(`/api/cameras/${encodeURIComponent(recordingsState.id)}/recordings/dates?days=14`); renderRecordingDays(data); if (recordingsState.dates.length) { const selected = recordingsState.dates.includes(recordingsState.date) ? recordingsState.date : recordingsState.dates[recordingsState.dates.length - 1]; await loadRecordingsDay(selected); } else { recordingsStatus.className = 'recordings-status'; recordingsStatus.textContent = data.sd_available ? 'La memoria SD está bien, pero no tiene grabaciones.' : 'No se detectó memoria SD.'; } } catch (error) { recordingsStatus.className = 'recordings-status bad'; recordingsStatus.textContent = error.message || 'No se pudieron cargar las grabaciones.'; } }
+    function openRecordings(id, name) { recordingsState.id = id; recordingsState.name = name; recordingsState.date = ''; recordingsState.preparedClipKey = ''; recordingsState.preparedVideoUrl = ''; recordingsTitle.textContent = `Grabaciones · ${name}`; recordingsSubtitle.textContent = 'Memoria SD · hora local de la cámara'; recordingsModal.classList.remove('hidden'); loadRecordingDays(); closeRecordingsButton.focus(); }
+    function closeRecordings() { recordingPlayer.pause(); recordingPlayer.removeAttribute('src'); recordingPlayer.load(); recordingPlayerWrap.classList.add('hidden'); recordingsModal.classList.add('hidden'); recordingsState.id = null; recordingsState.preparedClipKey = ''; recordingsState.preparedVideoUrl = ''; timelineCard.classList.add('hidden'); }
+    function bindCard(card) { bindStream(card); card.querySelectorAll('.relay-button').forEach(button => button.addEventListener('click', () => checkRelay(button.dataset.id, button, button.closest('.card').querySelector('.result')))); card.querySelectorAll('.privacy-button').forEach(button => button.addEventListener('click', () => setPrivacy(button.dataset.id, button, button.closest('.card')))); card.querySelectorAll('.fullscreen-button').forEach(button => button.addEventListener('click', () => toggleFullscreen(button.closest('.card')))); card.querySelectorAll('.recordings-button').forEach(button => button.addEventListener('click', () => openRecordings(Number(button.dataset.id), button.dataset.name))); card.querySelectorAll('.preview').forEach(preview => { preview.addEventListener('dblclick', () => toggleFullscreen(preview.closest('.card'))); preview.addEventListener('click', event => { const currentCard = preview.closest('.card'); if (fullscreenElement() === currentCard && currentCard.classList.contains('commands-open') && !event.target.closest('button')) toggleCommands(currentCard, currentCard.querySelector('.commands-handle'), false); }); preview.addEventListener('keydown', event => { if ((event.key === 'Enter' || event.key === ' ') && !event.target.closest('button')) { event.preventDefault(); toggleFullscreen(preview.closest('.card')); } }); }); card.querySelectorAll('.commands-handle').forEach(button => button.addEventListener('click', () => toggleCommands(button.closest('.card'), button))); card.querySelectorAll('.movement-toggle').forEach(button => button.addEventListener('click', () => toggleMovement(button, button.closest('.card')))); card.querySelectorAll('.ptz-button').forEach(button => button.addEventListener('click', () => moveCamera(button, button.closest('.card')))); card.querySelectorAll('.step-select').forEach(select => select.addEventListener('change', () => { const result = select.closest('.card').querySelector('.ptz-result'); result.textContent = `Listo · paso ${STEP_VALUES[select.value]}°`; })); }
+    async function refreshCard(card, id) { const data = await api(`/api/cameras/${encodeURIComponent(id)}`); if (!data.camera) throw new Error('No hay estado de la cámara.'); const holder = document.createElement('div'); holder.innerHTML = cardMarkup(data.camera); const replacement = holder.firstElementChild; if (!replacement) throw new Error('No se pudo actualizar la tarjeta.'); card.replaceWith(replacement); bindCard(replacement); return replacement; }
+    async function load() { grid.innerHTML = '<div class="empty-state">Cargando cámaras…</div>'; cameraSummary.textContent = 'Conectando con la nube Tapo…'; setState('Actualizando…'); try { const data = await api('/api/cameras'); if (!data.cameras?.length) { grid.innerHTML = '<div class="empty-state">No hay cámaras en esta cuenta.</div>'; cameraSummary.textContent = 'Sin cámaras'; setState('Sin cámaras', 'bad'); return; } grid.innerHTML = data.cameras.map(cardMarkup).join(''); grid.querySelectorAll('.card').forEach(bindCard); cameraSummary.textContent = `${data.cameras.length} ${data.cameras.length === 1 ? 'cámara disponible' : 'cámaras disponibles'}`; setState('En línea', 'ok'); } catch (error) { grid.innerHTML = `<div class="empty-state"><strong>No se pudieron cargar las cámaras</strong><div class="meta">${esc(error.message)}</div><button id="loadRetryButton" type="button">Reintentar</button></div>`; grid.querySelector('#loadRetryButton')?.addEventListener('click', load); cameraSummary.textContent = 'Error de conexión'; setState(error.message === 'login required' ? 'Tapo sin conectar' : 'Nube no disponible', 'bad'); if (error.message === 'login required') showLogin(); } }
+    function fullscreenElement() { return document.fullscreenElement || document.webkitFullscreenElement || null; }
+    function updateFullscreenButtons() { const active = fullscreenElement(); document.querySelectorAll('.card').forEach(card => { const activeCard = card === active; card.classList.toggle('is-fullscreen', activeCard); if (!activeCard) { card.classList.remove('commands-open'); const handle = card.querySelector('.commands-handle'); if (handle) { handle.setAttribute('aria-expanded', 'false'); handle.textContent = 'Controles'; } } if (card.classList.contains('movement-open')) positionMovementPanel(card); }); document.querySelectorAll('.fullscreen-button').forEach(button => { button.textContent = button.closest('.card') === active ? '⛶ Salir de pantalla completa' : '⛶ Pantalla completa'; }); }
+    function positionMovementPanel(card) { const panel = card.querySelector('.movement-panel'), control = card.querySelector('.movement-control'); if (!panel || !control) return; panel.classList.remove('opens-up', 'detached'); if (panel.classList.contains('hidden') || fullscreenElement() === card || card.classList.contains('is-fullscreen')) return; const controlRect = control.getBoundingClientRect(), panelRect = panel.getBoundingClientRect(), padding = 16, gap = 10; const fitsBelow = panelRect.height <= window.innerHeight - controlRect.bottom - gap - padding; const fitsAbove = panelRect.height <= controlRect.top - gap - padding; if (!fitsBelow && fitsAbove) panel.classList.add('opens-up'); else if (!fitsBelow) panel.classList.add('detached'); }
+    function repositionOpenMovementPanels() { document.querySelectorAll('.card.movement-open').forEach(positionMovementPanel); }
+    function toggleMovement(button, card, force) { const panel = card.querySelector('.movement-panel'); if (!panel) return; const open = force ?? panel.classList.contains('hidden'); panel.classList.toggle('hidden', !open); card.classList.toggle('movement-open', open); button.setAttribute('aria-expanded', String(open)); positionMovementPanel(card); }
+    function toggleCommands(card, button, force) { const open = force ?? !card.classList.contains('commands-open'); card.classList.toggle('commands-open', open); button.setAttribute('aria-expanded', String(open)); button.textContent = open ? 'Cerrar controles' : 'Controles'; }
+    async function toggleFullscreen(card) { try { if (fullscreenElement() === card || card.classList.contains('is-fullscreen')) { card.classList.remove('is-fullscreen'); if (document.exitFullscreen) await document.exitFullscreen(); else if (document.webkitExitFullscreen) document.webkitExitFullscreen(); } else { if (fullscreenElement()) { if (document.exitFullscreen) await document.exitFullscreen(); else if (document.webkitExitFullscreen) document.webkitExitFullscreen(); } card.classList.add('is-fullscreen'); const request = card.requestFullscreen || card.webkitRequestFullscreen; if (!request) throw new Error('Este navegador no permite pantalla completa'); await request.call(card); } } catch (error) { card.classList.remove('is-fullscreen'); const result = card.querySelector('.result'); result.textContent = error.message; result.className = 'meta bad result'; } finally { updateFullscreenButtons(); } }
+    document.addEventListener('fullscreenchange', updateFullscreenButtons); document.addEventListener('webkitfullscreenchange', updateFullscreenButtons);
+    window.addEventListener('resize', repositionOpenMovementPanels); window.addEventListener('scroll', repositionOpenMovementPanels, true);
+    async function checkRelay(id, button, result) { button.disabled = true; result.textContent = 'Probando conexión…'; result.className = 'meta'; try { const data = await api(`/api/cameras/${encodeURIComponent(id)}/relay-check`); result.textContent = data.ok ? 'Conexión con la nube OK.' : (data.error || 'Sin conexión con la nube'); result.className = `meta ${data.ok ? 'ok' : 'bad'}`; } catch (error) { result.textContent = error.message; result.className = 'meta bad'; } finally { button.disabled = false; } }
+    async function setPrivacy(id, button, card) { if (card.dataset.privacyBusy === 'true') return; const enabled = button.dataset.enabled === 'true', result = card.querySelector('.privacy-result'), previousText = button.textContent, controller = new AbortController(); let timedOut = false; card.dataset.privacyBusy = 'true'; button.disabled = true; button.setAttribute('aria-busy', 'true'); button.textContent = enabled ? 'Activando…' : 'Desactivando…'; result.textContent = enabled ? 'Activando privacidad…' : 'Quitando privacidad…'; result.className = 'meta'; const timeout = setTimeout(() => { timedOut = true; controller.abort(); }, 15000); try { const data = await api(`/api/cameras/${encodeURIComponent(id)}/privacy`, {method: 'POST', signal: controller.signal, headers: {'Content-Type': 'application/json'}, body: JSON.stringify({enabled})}); if (typeof data.privacy !== 'boolean') throw new Error('La cámara respondió un estado inválido.'); const isOn = data.privacy; const preview = card.querySelector('.preview'); if (!preview) throw new Error('Vista previa no disponible.'); preview.innerHTML = `${statusBadge({privacy: isOn})}${previewMarkup({id, name: card.dataset.name, privacy: isOn})}`; bindStream(card); card.querySelectorAll('.ptz-button').forEach(control => { if (control.dataset.x !== '0' || control.dataset.y !== '0') control.disabled = isOn; }); button.dataset.enabled = String(!isOn); button.textContent = isOn ? 'Quitar privacidad' : 'Activar privacidad'; result.textContent = isOn ? 'Privacidad activada: video y audio en pausa.' : 'Privacidad desactivada.'; result.className = `meta ${isOn ? 'privacy-on' : 'ok'}`; try { await refreshCard(card, id); } catch (_) { /* The local state is already updated; keep the card usable if refresh fails. */ } } catch (error) { button.textContent = previousText; result.textContent = timedOut ? 'La cámara tardó demasiado. Intenta de nuevo.' : (error.message || 'No se pudo cambiar la privacidad.'); result.className = 'meta bad'; } finally { clearTimeout(timeout); card.dataset.privacyBusy = 'false'; button.removeAttribute('aria-busy'); button.disabled = false; } }
+    async function moveCamera(button, card) { const step = STEP_VALUES[card.querySelector('.step-select')?.value || 'medium'], x = Number(button.dataset.x) * step, y = Number(button.dataset.y) * step, result = card.querySelector('.ptz-result'), controls = [...card.querySelectorAll('.ptz-button')]; controls.forEach(control => { if (!control.disabled || control === button) control.disabled = true; }); result.textContent = 'Moviendo…'; result.className = 'meta ptz-result'; try { await api(`/api/cameras/${encodeURIComponent(card.dataset.id)}/move`, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({x, y})}); result.textContent = `Movimiento enviado · ${step}°.`; result.className = 'meta ptz-result ok'; } catch (error) { result.textContent = error.message; result.className = 'meta ptz-result bad'; } finally { const privacyOn = card.querySelector('.privacy-button')?.dataset.enabled === 'false'; controls.forEach(control => { if (control.dataset.x !== '0' || control.dataset.y !== '0') control.disabled = privacyOn; }); } }
+    loginForm.addEventListener('submit', async event => { event.preventDefault(); loginButton.disabled = true; loginError.textContent = 'Conectando con Tapo…'; try { const data = await api('/api/login', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({username: document.querySelector('#username').value, password: document.querySelector('#password').value})}); if (data.mfa_required) showMfa(data.mfa_types); else { showApp(); await load(); } } catch (error) { loginError.textContent = error.message; } finally { loginButton.disabled = false; } });
+    requestMfaButton.addEventListener('click', async () => { requestMfaButton.disabled = true; mfaError.textContent = ''; mfaInfo.textContent = 'Solicitando verificación…'; try { const data = await api('/api/mfa/request', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({mfa_type: Number(mfaType.value)})}); mfaInfo.textContent = data.mfa_type === 1 ? 'Revisa la notificación en la app Tapo.' : 'Revisa el código que llegó a tu correo.'; verifyMfaButton.disabled = false; mfaCode.focus(); } catch (error) { mfaError.textContent = error.message; } finally { requestMfaButton.disabled = false; } });
+    verifyMfaButton.addEventListener('click', async () => { verifyMfaButton.disabled = true; mfaError.textContent = ''; mfaInfo.textContent = 'Verificando…'; try { await api('/api/mfa/verify', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({code: mfaCode.value})}); showApp(); await load(); } catch (error) { mfaError.textContent = error.message; verifyMfaButton.disabled = false; } });
+    backLoginButton.addEventListener('click', () => { showCredentials(); document.querySelector('#password').value = ''; });
+    async function logout() { if (!confirm('¿Desconectar la cuenta Tapo del servidor? Nadie podrá ver las cámaras hasta que un administrador la vuelva a conectar.')) return; logoutButton.disabled = true; try { await api('/api/logout', {method: 'POST'}); showCredentials(); showLogin(); } catch (error) { setState(error.message, 'bad'); } finally { logoutButton.disabled = false; } }
+    logoutButton.addEventListener('click', logout); refreshButton.addEventListener('click', load); refreshMainButton.addEventListener('click', load);
+    closeRecordingsButton.addEventListener('click', closeRecordings); refreshRecordingsButton.addEventListener('click', loadRecordingDays); recordingsModal.addEventListener('click', event => { if (event.target === recordingsModal) closeRecordings(); });
+    document.addEventListener('keydown', event => { if (event.key === 'Escape') { if (!recordingsModal.classList.contains('hidden')) { closeRecordings(); return; } const active = fullscreenElement(); if (active?.classList.contains('commands-open')) toggleCommands(active, active.querySelector('.commands-handle'), false); } });
+    // ---------- EC-Cam: sesión propia, usuarios y cuenta ----------
+    const usersModal = document.querySelector('#usersModal'), accountModal = document.querySelector('#accountModal'), userList = document.querySelector('#userList'), usersMsg = document.querySelector('#usersMsg'), accountMsg = document.querySelector('#accountMsg');
+    function roleName(role) { return role === 'admin' ? 'Administrador' : 'Visor'; }
+    function openModal(modal) { modal.classList.remove('hidden'); modal.querySelector('input, button')?.focus(); }
+    function closeModal(modal) { modal.classList.add('hidden'); }
+    document.querySelectorAll('[data-close-modal]').forEach(button => button.addEventListener('click', () => closeModal(button.closest('.app-modal'))));
+    [usersModal, accountModal].forEach(modal => modal.addEventListener('click', event => { if (event.target === modal) closeModal(modal); }));
+    document.addEventListener('keydown', event => { if (event.key === 'Escape') [usersModal, accountModal].forEach(closeModal); });
+    function setMsg(node, text, tone = '') { node.textContent = text; node.className = `form-msg ${tone}`; }
+    function renderUsers(users) {
+      userList.innerHTML = users.map(u => { const me = u.username === appUser.user; return `<div class="user-row" data-user="${esc(u.username)}"><div class="who"><strong>${esc(u.username)}</strong>${me ? ' <small style="display:inline">(tú)</small>' : ''}<small>${roleName(u.role)}</small></div><div class="row-actions">${me ? '' : `<button class="ghost" type="button" data-act="role" data-role="${u.role === 'admin' ? 'viewer' : 'admin'}">Hacer ${u.role === 'admin' ? 'visor' : 'admin'}</button>`}<button class="ghost" type="button" data-act="password">Contraseña</button>${me ? '' : '<button class="danger" type="button" data-act="delete">Borrar</button>'}</div></div>`; }).join('');
+    }
+    async function loadUsers() { setMsg(usersMsg, ''); try { const data = await api('/api/app/users'); renderUsers(data.users); } catch (error) { setMsg(usersMsg, error.message, 'bad'); } }
+    userList.addEventListener('click', async event => {
+      const button = event.target.closest('button[data-act]'); if (!button) return;
+      const username = button.closest('.user-row').dataset.user, act = button.dataset.act;
+      try {
+        let data;
+        if (act === 'delete') { if (!confirm(`¿Borrar al usuario ${username}?`)) return; data = await api('/api/app/users/delete', {method: 'POST', body: JSON.stringify({username})}); setMsg(usersMsg, 'Usuario borrado.', 'ok'); }
+        else if (act === 'role') { data = await api('/api/app/users/role', {method: 'POST', body: JSON.stringify({username, role: button.dataset.role})}); setMsg(usersMsg, 'Rol actualizado.', 'ok'); }
+        else { const password = prompt(`Nueva contraseña para ${username} (mín. 8 caracteres):`); if (!password) return; data = await api('/api/app/users/password', {method: 'POST', body: JSON.stringify({username, password})}); setMsg(usersMsg, 'Contraseña cambiada; se cerraron sus sesiones.', 'ok'); }
+        renderUsers(data.users);
+      } catch (error) { setMsg(usersMsg, error.message, 'bad'); }
+    });
+    document.querySelector('#addUserForm').addEventListener('submit', async event => {
+      event.preventDefault(); const form = event.currentTarget, submit = form.querySelector('button[type=submit]'); submit.disabled = true;
+      try { const data = await api('/api/app/users', {method: 'POST', body: JSON.stringify({username: form.querySelector('#newUserName').value, password: form.querySelector('#newUserPass').value, role: form.querySelector('#newUserRole').value})}); renderUsers(data.users); form.reset(); setMsg(usersMsg, 'Usuario agregado.', 'ok'); }
+      catch (error) { setMsg(usersMsg, error.message, 'bad'); } finally { submit.disabled = false; }
+    });
+    document.querySelector('#passwordForm').addEventListener('submit', async event => {
+      event.preventDefault(); const form = event.currentTarget, submit = form.querySelector('button[type=submit]');
+      const current = form.querySelector('#currentPass').value, next = form.querySelector('#newPass').value;
+      if (next !== form.querySelector('#newPass2').value) { setMsg(accountMsg, 'Las contraseñas nuevas no coinciden.', 'bad'); return; }
+      submit.disabled = true;
+      try { await api('/api/app/me/password', {method: 'POST', body: JSON.stringify({current, new: next})}); form.reset(); setMsg(accountMsg, 'Contraseña cambiada. Se cerró la sesión en tus otros dispositivos.', 'ok'); }
+      catch (error) { setMsg(accountMsg, error.message, 'bad'); } finally { submit.disabled = false; }
+    });
+    document.querySelector('#usersButton').addEventListener('click', () => { openModal(usersModal); loadUsers(); });
+    document.querySelector('#accountButton').addEventListener('click', () => { document.querySelector('#accountInfo').textContent = `Usuario: ${appUser.user} · ${roleName(appUser.role)}`; document.querySelector('#accountUserHidden').value = appUser.user; setMsg(accountMsg, ''); openModal(accountModal); });
+    document.querySelector('#appLogoutButton').addEventListener('click', async () => { try { await api('/api/app/logout', {method: 'POST'}); } catch (_) {} location.replace('/login'); });
+    async function checkTapo() { try { const data = await api('/api/session'); if (data.authenticated) { showApp(); await load(); } else if (data.mfa_pending && isAdmin()) showMfa(data.mfa_types); else showLogin(); } catch (_) { showLogin(); } }
+    document.querySelector('#viewerRetryButton').addEventListener('click', checkTapo);
+    (async function init() {
+      try {
+        const session = await api('/api/app/session');
+        if (!session.app_authenticated) { location.replace(session.needs_setup ? '/setup' : '/login'); return; }
+        appUser = {user: session.user, role: session.role};
+        document.querySelector('#userChip').innerHTML = `<strong>${esc(appUser.user)}</strong> · ${roleName(appUser.role)}`;
+        document.querySelector('#usersButton').classList.toggle('hidden', !isAdmin());
+      } catch (_) { location.replace('/login'); return; }
+      await checkTapo();
+    })();
+  </script>
+</body>
+</html>

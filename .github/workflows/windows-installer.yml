@@ -1,0 +1,50 @@
+# Compila el instalador de Windows de EC-Cam en GitHub (no se instala nada en tu PC).
+# - Cada push a main: genera EC-Cam-Setup como "artifact" (pestaña Actions).
+# - Cada etiqueta vX.Y.Z: además crea un Release con el .exe para descargar.
+name: Instalador Windows
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Instalar PyInstaller e Inno Setup
+        shell: pwsh
+        run: |
+          python -m pip install --upgrade pip pyinstaller
+          if (-not (Test-Path "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe")) { choco install innosetup --no-progress -y }
+
+      - name: Compilar instalador
+        shell: pwsh
+        run: ./windows/build.ps1
+
+      - name: Guardar instalador
+        uses: actions/upload-artifact@v4
+        with:
+          name: EC-Cam-Setup
+          path: windows/out/*.exe
+          if-no-files-found: error
+
+      - name: Publicar Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $exe = Get-ChildItem windows/out/*.exe | Select-Object -First 1
+          (Get-FileHash $exe.FullName -Algorithm SHA256).Hash + "  " + $exe.Name | Out-File windows/out/SHA256SUMS.txt -Encoding ascii
+          gh release create "${{ github.ref_name }}" $exe.FullName windows/out/SHA256SUMS.txt --title "EC-Cam ${{ github.ref_name }}" --notes "Instalador de Windows de EC-Cam."
