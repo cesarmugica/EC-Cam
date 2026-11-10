@@ -79,5 +79,4 @@ Diagnóstico: `http://127.0.0.1:8790/api/app/diag` muestra el estado de cada cá
 ## Limitaciones
 
 - Usa endpoints no documentados de la nube Tapo; si TP-Link los cambia, puede dejar de funcionar hasta actualizarse (ver [docs/PROTOCOLO-TAPO.md](docs/PROTOCOLO-TAPO.md)).
-- Grabaciones de la SD: aún no funcionan con el firmware C200 1.3.17 build 58281.
 - Probado con Tapo C200 (firmwares 1.3.17 y 1.9.1) y C500.

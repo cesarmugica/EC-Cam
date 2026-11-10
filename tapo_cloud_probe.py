@@ -709,28 +709,49 @@ class TapoCloud:
         user_id = user_result.get("user_id")
         if not user_id:
             raise RuntimeError("camera returned no playback user id")
-        responses = self.services_sync(
-            base_url,
-            device,
-            [
-                {
-                    "method": "searchVideoOfDay",
-                    "params": {
-                        "playback": {
-                            "search_video_utility": {
-                                "channel": 0,
-                                "date": date,
-                                "end_index": 999999999,
-                                "id": int(user_id),
-                                "start_index": 0,
+        # EC-Cam: pedir los clips por páginas. Topo pedía todo el día de una
+        # vez (end_index 999999999); con muchos clips la respuesta es tan grande
+        # que la nube de Tapo la devuelve vacía. En páginas de 50 sí contesta.
+        page_size = 50
+        raw_items: list = []
+        for page in range(60):  # hasta 3000 clips por día
+            start_index = page * page_size
+            responses = self.services_sync(
+                base_url,
+                device,
+                [
+                    {
+                        "method": "searchVideoOfDay",
+                        "params": {
+                            "playback": {
+                                "search_video_utility": {
+                                    "channel": 0,
+                                    "date": date,
+                                    "end_index": start_index + page_size - 1,
+                                    "id": int(user_id),
+                                    "start_index": start_index,
+                                }
                             }
-                        }
-                    },
-                }
-            ],
-            fresh_connection=True,
-        )
-        result = self._camera_service_result(responses, "searchVideoOfDay")
+                        },
+                    }
+                ],
+                fresh_connection=True,
+            )
+            if not responses and page > 0:
+                break
+            try:
+                page_result = self._camera_service_result(responses, "searchVideoOfDay")
+            except RuntimeError:
+                if page > 0:  # una página más allá del final puede venir con error
+                    break
+                raise
+            page_items = page_result.get("playback", {}).get("search_video_results", []) or []
+            if not isinstance(page_items, list):
+                break
+            raw_items.extend(page_items)
+            if len(page_items) < page_size:
+                break
+        result = {"playback": {"search_video_results": raw_items}}
         day_start = datetime.strptime(date, "%Y%m%d").replace(tzinfo=camera_tz)
         day_end = day_start + timedelta(days=1)
         clips: list[dict] = []

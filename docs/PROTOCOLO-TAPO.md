@@ -180,7 +180,7 @@ FFmpeg toma el MPEG-TS y lo reempaqueta **sin recodificar** a MP4 fragmentado (`
 3. `relay/request` con `streamType: 1`, `trackId` y `customParams: {"audio_config":{"encode_type":"G711ulaw","sample_rate":"16"}}`. Al abrir el relay cambian las cabeceras: `X-Client-Model: OnTapo`, `X-Track-Id`, `X-Compete: 1`, `X-Arrive-Latency: 200`.
 4. Por el relay se manda `{"type":"request","seq":N,"params":{"playback":{…"start_time","end_time","event_type":[1,2]…},"method":"get"}}` y al terminar el mismo con `"method":"stop"`, porque la cámara solo atiende **una reproducción a la vez**.
 
-> Pendiente: en el C200 1.3.17 build 58281, `searchVideoOfDay` devuelve una respuesta que EC-Cam no reconoce («incomplete searchVideoOfDay response»). Probablemente cambió el formato igual que la vista previa.
+> **Pedir los clips por páginas.** Con `end_index: 999999999` (todo el día de una vez) y muchos clips, la nube de Tapo devuelve `{"outputParams":{}}` vacío: la respuesta es demasiado grande. EC-Cam pide páginas de 50 (`start_index` 0–49, 50–99, …) hasta que una trae menos de 50. `id` debe ser el número de `getUserID`: como texto o sin él, la cámara responde `-71112`. Cada clip trae `startTime`, `endTime` (segundos Unix) y `vedio_type` (así, con la errata; `"1"` = continua, `"2"` = movimiento).
 
 ## 8. Si deja de funcionar
 
@@ -212,6 +212,7 @@ FFmpeg toma el MPEG-TS y lo reempaqueta **sin recodificar** a MP4 fragmentado (`
 |---|---|---|
 | 2026-11-09 | El C200 1.3.17 build 58281 abre el relay pero no manda video | EC-Cam 1.0.6: petición de vista previa, confirmaciones y latido (5.3) |
 | 2026-11-09 | Topo trataba las respuestas JSON de la cámara como video | EC-Cam 1.0.6: se separan por `Content-Type` |
+| 2026-11-09 | Días con muchos clips: la búsqueda de grabaciones regresaba vacía | EC-Cam 1.1.2: búsqueda por páginas de 50 (punto 7) |
 
 ## Fuentes
 
