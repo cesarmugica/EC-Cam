@@ -1281,6 +1281,7 @@ class CloudAppState:
             workers = [self.workers.pop(k) for k in keys]
         for worker in workers:
             worker.close()
+            worker._broadcast_native_reset()
 
     def native_player(self, index: int, enabled: bool) -> dict:
         if enabled:
@@ -1422,6 +1423,18 @@ class CloudAppState:
         audio_path.write_bytes(audio)
         return len(audio)
 
+    def playback_busy(self, index: int) -> bool:
+        """EC-Cam: True mientras se descarga una grabación de esa cámara.
+
+        La C200 no da en vivo y grabación a la vez por la nube (el relay
+        responde -52207 "passthrough fail"); la app oficial también apaga el
+        en vivo al reproducir.
+        """
+        with self.recording_jobs_lock:
+            job_id = self.recording_active.get(index)
+            job = self.recording_jobs.get(job_id) if job_id else None
+            return bool(job and job.get("status") == "preparing" and job.get("progress", 0) < 82)
+
     def start_recording(self, index: int, start: int, end: int) -> str:
         if end <= start:
             raise ValueError("recording end must be after start")
@@ -1473,14 +1486,27 @@ class CloudAppState:
             update_job(progress=max(0, min(progress, 99)), message=message)
 
         try:
-            bytes_written = self.client.download_recording(
-                self.base_url,
-                self.devices[index],
-                start,
-                end,
-                str(ts_path),
-                progress=report_progress,
-            )
+            # EC-Cam: apagar el en vivo de esa cámara y darle un momento al
+            # relay de Tapo para soltarla antes de pedir la grabación.
+            self.reset_worker(index)
+            report_progress(3, "Pausando el video en vivo…")
+            time.sleep(2.5)
+            for attempt in range(3):
+                try:
+                    bytes_written = self.client.download_recording(
+                        self.base_url,
+                        self.devices[index],
+                        start,
+                        end,
+                        str(ts_path),
+                        progress=report_progress,
+                    )
+                    break
+                except RuntimeError as exc:
+                    if "passthrough fail" not in str(exc) or attempt == 2:
+                        raise
+                    report_progress(4, "La cámara está ocupada; reintentando…")
+                    time.sleep(4)
             if bytes_written <= 0:
                 raise RuntimeError("recording relay returned no media")
             audio_bytes = self._extract_mulaw_audio(ts_path, audio_path)
@@ -1866,6 +1892,9 @@ class Handler(BaseHTTPRequestHandler):
             worker.unsubscribe(subscriber)
 
     def stream_native_video(self, state: CloudAppState, index: int, quality: str = STREAM_RESOLUTION) -> None:
+        if state.playback_busy(index):
+            self._send_stream_unavailable("playback in progress")
+            return
         worker = state.worker(index, quality)
         subscriber = worker.subscribe_native_video()
         try:
@@ -1960,6 +1989,9 @@ class Handler(BaseHTTPRequestHandler):
             pass
 
     def stream_audio(self, state: CloudAppState, index: int, quality: str = STREAM_RESOLUTION) -> None:
+        if state.playback_busy(index):
+            self._send_stream_unavailable("playback in progress")
+            return
         worker = state.worker(index, quality)
         subscriber = worker.subscribe_audio()
         try:

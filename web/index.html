@@ -256,6 +256,7 @@
           .then(r => r.json()).then(status => {
             if (!entry.retryTimer) return;
             if (status.kind === 'offline') { setOverlay(entry, 'error', 'Cámara sin conexión (según Tapo). Reintento en 1 min.'); schedule(60000); }
+            else if (status.kind === 'playback') { setOverlay(entry, 'error', 'La cámara está reproduciendo una grabación…'); schedule(8000); }
             else if (status.kind === 'silent') { setOverlay(entry, 'error', 'La cámara no está enviando video. Reintento en 30 s.'); schedule(30000); }
           }).catch(() => {});
       }
@@ -265,7 +266,10 @@
         pinned = pinned.filter(card => entries.has(card));
         const fs = fullscreenCard();
         let want = [];
-        if (!document.hidden) {
+        // Con la ventana de Grabaciones abierta no se transmite en vivo: la
+        // cámara no puede dar en vivo y grabación a la vez.
+        const recordingsOpen = !recordingsModal.classList.contains('hidden');
+        if (!document.hidden && !recordingsOpen) {
           if (fs) want = entries.has(fs) ? [fs] : [];
           else {
             const visible = [...entries.values()].filter(entry => entry.visible).map(entry => entry.card);
@@ -298,6 +302,7 @@
         if ([...entries.keys()].some(card => !card.isConnected)) refresh();
       }
       setInterval(watchdog, 2000);
+      new MutationObserver(schedule).observe(recordingsModal, {attributes: true, attributeFilter: ['class']});
       document.addEventListener('visibilitychange', refresh);
       document.addEventListener('fullscreenchange', schedule); document.addEventListener('webkitfullscreenchange', schedule);
       window.addEventListener('online', refresh);

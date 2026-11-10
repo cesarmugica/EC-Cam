@@ -33,7 +33,7 @@ from http.server import ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
-APP_VERSION = "1.1.4"
+APP_VERSION = "1.1.5"
 try:  # fecha del instalador, la escribe windows/build.ps1
     from eccam_build import BUILD_DATE  # type: ignore[import-not-found]
 except ImportError:
@@ -288,7 +288,12 @@ class EcCamHandler(engine.Handler):
         except ValueError:
             pass
         kind = "ok"
-        if "device offline" in message:
+        with contextlib.suppress(ValueError, AttributeError):
+            if state is not None and state.playback_busy(int(query.get("cam", ["0"])[0])):
+                message = "playback in progress"
+        if message == "playback in progress":
+            kind = "playback"
+        elif "device offline" in message:
             kind = "offline"
         elif "timed out" in message:
             kind = "silent"
