@@ -71,11 +71,22 @@ Invoke-Checked $python ($pythonArgs + @(
   '--add-data', "$(Join-Path $projectRoot 'web');web",
   '--add-data', "$(Join-Path $projectRoot 'certs');certs",
   '--exclude-module', 'tkinter',
+  # Módulos propios: incluirlos siempre aunque se carguen dentro de funciones.
+  '--hidden-import', 'tapo_cloud_app', '--hidden-import', 'tapo_cloud_probe',
+  '--hidden-import', 'eccam_relaytest', '--hidden-import', 'eccam_sdtest', '--hidden-import', 'eccam_playtest',
   '--distpath', $distDir,
   '--workpath', (Join-Path $scriptDir '.build'),
   '--specpath', (Join-Path $scriptDir '.build'),
   (Join-Path $projectRoot 'eccam_server.py')
 ))
+# Verificar que los módulos propios quedaron dentro del ejecutable.
+$xref = Get-ChildItem -Path (Join-Path $scriptDir '.build') -Filter 'xref-*.html' -Recurse | Select-Object -First 1
+if (-not $xref) { throw 'No se encontró el reporte de PyInstaller para verificar el empaquetado.' }
+$xrefText = Get-Content $xref.FullName -Raw
+foreach ($module in @('tapo_cloud_app', 'tapo_cloud_probe', 'eccam_relaytest', 'eccam_sdtest', 'eccam_playtest')) {
+  if ($xrefText -notmatch [regex]::Escape("$module.py")) { throw "El módulo $module no quedó dentro del ejecutable." }
+}
+Write-Host 'Módulos propios verificados dentro del ejecutable.'
 Copy-Item $ffmpegCache (Join-Path $appDir 'ffmpeg.exe') -Force
 Copy-Item (Join-Path $projectRoot 'LICENSE-TOPO.txt') $appDir -Force
 

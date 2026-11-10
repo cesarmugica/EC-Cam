@@ -34,7 +34,7 @@ from http.server import ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
-APP_VERSION = "1.1.9"
+APP_VERSION = "1.1.10"
 try:  # fecha del instalador, la escribe windows/build.ps1
     from eccam_build import BUILD_DATE  # type: ignore[import-not-found]
 except ImportError:
@@ -118,13 +118,15 @@ _locate_ffmpeg()
 def _import_engine():
     """Importar el motor; si Windows tiene ocupado un archivo (el antivirus
     revisando lo recién instalado), esperar y reintentar en vez de cerrarse."""
-    import importlib
     import time as _time
 
     last_error: Exception | None = None
     for attempt in range(10):
         try:
-            return importlib.import_module("tapo_cloud_app")
+            # Import estático (no importlib) para que PyInstaller lo empaquete.
+            import tapo_cloud_app
+
+            return tapo_cloud_app
         except ImportError as exc:
             if "DLL load failed" not in str(exc):
                 raise
