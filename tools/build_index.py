@@ -21,7 +21,7 @@ R('<title>Topo - desktop app for Tapo camera</title>', '''<title>EC-Cam</title>
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="EC-Cam">
+  <meta name="apple-mobile-web-app-title" content="EC-Cam Web">
   <script src="/pwa.js?v=1" defer></script>''')
 R('''      color-scheme: light;''', '''      color-scheme: dark;''')
 R('''      --bg: #edede9; --surface: #f5ebe0; --surface-2: #e3d5ca; --surface-3: #d6ccc2;
@@ -63,7 +63,7 @@ R('    @keyframes spin', '''    .header-actions button.icon-only { min-width: 38
 R('''<div class="brand"><img class="brand-icon" src="/assets/topo.png" alt="Topo"><div class="brand-copy"><h1>Topo - desktop app for Tapo camera</h1><div class="brand-subtitle">Cloud control for your cameras</div></div></div>''',
   '''<div class="brand"><img class="brand-icon" src="/img/pwa-192.png" alt=""><div class="brand-copy"><h1>EC-Cam</h1><div class="brand-subtitle">Tus cámaras Tapo en vivo</div></div></div>''')
 R('''<div id="account"><div id="state" aria-live="polite">Login required</div><div class="header-actions"><button id="infoButton" class="ghost" type="button" title="Open the Topo website" aria-label="Open the Topo website">Info</button><button id="refreshButton" class="ghost hidden" type="button" title="Refresh cameras" aria-label="Refresh cameras">↻</button><button id="logoutButton" class="danger hidden" type="button">Log out</button></div></div>''',
-  '''<div id="account"><div id="state" aria-live="polite">Conectando…</div><div class="header-actions"><button class="ghost" type="button" data-instalar style="display:none" title="Instalar EC-Cam como app en esta PC">⤓ Instalar app</button><button id="refreshButton" class="ghost icon-only hidden" type="button" title="Actualizar cámaras" aria-label="Actualizar cámaras">↻</button></div></div>''')
+  '''<div id="account"><div id="state" aria-live="polite">Conectando…</div><div class="header-actions"><button class="ghost" type="button" data-instalar style="display:none" title="Instalar «EC-Cam Web» como app con su propia ventana">⤓ Instalar app</button><button id="refreshButton" class="ghost icon-only hidden" type="button" title="Actualizar cámaras" aria-label="Actualizar cámaras">↻</button></div></div>''')
 
 # ---------- login de Tapo ----------
 R('''<img class="login-brand" src="/assets/topo.png" alt="Topo"><div id="credentialsView"><h2>Log in to Tapo</h2><p>Use your Tapo account credentials. Your password is not saved.</p>''',

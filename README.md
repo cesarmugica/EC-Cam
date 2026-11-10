@@ -16,7 +16,7 @@ El motor de video viene de [Topo](https://github.com/filirnd/topo) (licencia MIT
 2. Se abre EC-Cam en el navegador. Entra con el **correo y la contraseña de tu cuenta Tapo** (los mismos de la app del celular) y completa la verificación en dos pasos si la pide.
 3. Listo. La próxima vez entras directo: EC-Cam guarda la sesión de Tapo en tu PC (nunca la contraseña).
 
-Opcional: con el botón **⤓ Instalar app** (Chrome o Edge) EC-Cam queda en su propia ventana, como un programa más.
+Opcional: con el botón **⤓ Instalar app** (Chrome o Edge) se instala **EC-Cam Web**, que abre en su propia ventana como un programa más. El acceso **EC-Cam** del escritorio es el del instalador: arranca el servicio y abre EC-Cam en el navegador.
 
 En el escritorio queda **EC-Cam** y en el menú Inicio **Iniciar EC-Cam**, **Detener servicio EC-Cam** y **Carpeta de datos de EC-Cam**. Si marcaste la opción al instalar, el servicio arranca con Windows.
 
