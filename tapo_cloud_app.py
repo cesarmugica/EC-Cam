@@ -65,6 +65,23 @@ NATIVE_MAX_BACKLOG = 90
 GOP_CACHE_MAX = 240
 
 
+def client_part(payload: dict, extra_headers: dict | None = None) -> bytes:
+    """EC-Cam: parte multipart que el cliente manda a la cámara por el relay.
+
+    Protocolo de la app oficial (documentado por tothi/tapo-view): pedir la
+    vista previa, confirmar lo recibido cada 25 partes y avisar que seguimos
+    vivos cada 20 s. Los firmwares nuevos no mandan video sin la petición.
+    """
+    raw = json.dumps(payload, separators=(",", ":")).encode("utf-8")
+    lines = ["----client-stream-boundary--", "Content-Type: application/json", f"Content-Length: {len(raw)}"]
+    for key, value in (extra_headers or {}).items():
+        lines.append(f"{key}: {value}")
+    return ("\r\n".join(lines) + "\r\n\r\n").encode("ascii") + raw + b"\r\n"
+
+
+HEARTBEAT_SECONDS = 20.0
+
+
 def _iter_boxes(data: bytes, start: int = 0, end: int | None = None):
     """Recorre cajas MP4 (tamaño, tipo) dentro de data[start:end]."""
     end = len(data) if end is None else end
@@ -657,6 +674,9 @@ class CloudMediaWorker:
         }
         if relay_info.get("elbCookie"):
             headers["Cookie"] = str(relay_info["elbCookie"])
+        session_token = str(relay_info.get("sessionToken") or "")
+        if session_token and session_token != relay_token:
+            headers["X-Client-SessionID"] = session_token
         raw_request = (
             f"POST {path} HTTP/1.1\r\n"
             + "".join(f"{key}: {value}\r\n" for key, value in headers.items())
@@ -692,6 +712,27 @@ class CloudMediaWorker:
                     # producer-side delay.
                     tls_socket.settimeout(20)
                     tls_socket.sendall(raw_request)
+                    # EC-Cam: pedir la vista previa (la app oficial lo hace;
+                    # sin esto el firmware nuevo nunca manda video).
+                    tls_socket.sendall(
+                        client_part(
+                            {
+                                "type": "request",
+                                "seq": 1,
+                                "params": {
+                                    "method": "get",
+                                    "preview": {
+                                        "channels": [0],
+                                        "resolutions": [self.resolution],
+                                        "audio": ["default"],
+                                    },
+                                },
+                            },
+                            {"X-Data-Window-Size": "50"},
+                        )
+                    )
+                    relay_session_id = ""
+                    last_heartbeat = time.monotonic()
                     buffer = bytearray()
                     self._read_http_headers(tls_socket, buffer)
                     # The JPEG decoder is needed only by the legacy MJPEG
@@ -827,6 +868,11 @@ class CloudMediaWorker:
                             idle_since = time.monotonic()
                         elif time.monotonic() - idle_since > RELAY_IDLE_SECONDS:
                             break
+                        if time.monotonic() - last_heartbeat >= HEARTBEAT_SECONDS:
+                            last_heartbeat = time.monotonic()
+                            tls_socket.sendall(
+                                client_part({"type": "notification", "params": {"event_type": "heartbeat"}})
+                            )
                         boundary = self._read_line(tls_socket, buffer)
                         if not boundary:
                             continue
@@ -858,6 +904,27 @@ class CloudMediaWorker:
                         # Content-Type value, but the payload is still the
                         # MPEG-TS video stream. The length and encryption flag
                         # are the reliable framing signals here.
+                        content_type = part_headers.get("content-type", "").lower()
+                        relay_session_id = part_headers.get("x-session-id") or relay_session_id
+                        if "json" in content_type and length > 0:
+                            # EC-Cam: respuesta de la cámara (p. ej. session_id).
+                            body = self._read_exact(tls_socket, buffer, length)
+                            with contextlib.suppress(ValueError, TypeError, AttributeError):
+                                message = json.loads(body.decode("utf-8", "replace"))
+                                params = message.get("params") or {}
+                                if params.get("session_id") is not None:
+                                    relay_session_id = str(params["session_id"])
+                                if params.get("error_code") not in (None, 0):
+                                    raise RuntimeError(f"camera rejected preview: error_code={params.get('error_code')}")
+                            continue
+                        sequence = part_headers.get("x-data-sequence", "")
+                        if relay_session_id and sequence.isdigit() and int(sequence) % 25 == 0:
+                            tls_socket.sendall(
+                                client_part(
+                                    {"type": "notification", "params": {"event_type": "stream_sequence"}},
+                                    {"X-Data-Received": sequence, "X-Session-Id": relay_session_id},
+                                )
+                            )
                         is_video = length > 0
                         # The native player can be opened after this relay has
                         # already started for the browser preview. Resolve it
