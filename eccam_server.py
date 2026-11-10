@@ -34,7 +34,7 @@ from http.server import ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
-APP_VERSION = "1.1.8"
+APP_VERSION = "1.1.9"
 try:  # fecha del instalador, la escribe windows/build.ps1
     from eccam_build import BUILD_DATE  # type: ignore[import-not-found]
 except ImportError:
@@ -115,7 +115,28 @@ _setup_logging()
 _hide_child_consoles()
 _locate_ffmpeg()
 
-import tapo_cloud_app as engine  # noqa: E402  (motor de Topo)
+def _import_engine():
+    """Importar el motor; si Windows tiene ocupado un archivo (el antivirus
+    revisando lo recién instalado), esperar y reintentar en vez de cerrarse."""
+    import importlib
+    import time as _time
+
+    last_error: Exception | None = None
+    for attempt in range(10):
+        try:
+            return importlib.import_module("tapo_cloud_app")
+        except ImportError as exc:
+            if "DLL load failed" not in str(exc):
+                raise
+            last_error = exc
+            for name in [m for m in sys.modules if m in ("ssl", "_ssl", "tapo_cloud_app", "tapo_cloud_probe")]:
+                sys.modules.pop(name, None)
+            print(f"EC-Cam: archivo ocupado al iniciar ({exc}); reintento {attempt + 1}/10", flush=True)
+            _time.sleep(2)
+    raise last_error  # type: ignore[misc]
+
+
+engine = _import_engine()  # motor de Topo
 
 # ---------------------------------------------------------------------------
 # Configuración

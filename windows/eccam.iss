@@ -29,6 +29,8 @@ WizardStyle=modern
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 CloseApplications=force
+; No relanzar por su cuenta lo que cerró: [Run] arranca el servicio una sola vez.
+RestartApplications=no
 
 [Languages]
 Name: "es"; MessagesFile: "compiler:Languages\Spanish.isl"
