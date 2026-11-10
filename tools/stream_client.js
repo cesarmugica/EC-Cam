@@ -12,8 +12,8 @@
       const entries = new Map();
       let pinned = [];
       let timer = null;
-      let gridQuality = 'sd';
-      try { gridQuality = localStorage.getItem('eccam_quality') === 'hd' ? 'hd' : 'sd'; } catch (_) {}
+      let gridQuality = 'hd';
+      try { gridQuality = localStorage.getItem('eccam_quality2') === 'sd' ? 'sd' : 'hd'; } catch (_) {}
       const observer = 'IntersectionObserver' in window ? new IntersectionObserver(items => {
         items.forEach(item => { const entry = entries.get(item.target); if (entry) entry.visible = item.isIntersecting; });
         schedule();
@@ -119,7 +119,7 @@
         schedule();
         return entry;
       }
-      function setGridQuality(value) { gridQuality = value === 'hd' ? 'hd' : 'sd'; try { localStorage.setItem('eccam_quality', gridQuality); } catch (_) {} refresh(); }
+      function setGridQuality(value) { gridQuality = value === 'hd' ? 'hd' : 'sd'; try { localStorage.setItem('eccam_quality2', gridQuality); } catch (_) {} refresh(); }
       return {register, refresh, setGridQuality, quality: () => gridQuality, qualityOf: card => entries.get(card)?.quality || gridQuality, maxLive};
     })();
     function bindStream(card) {

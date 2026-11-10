@@ -135,6 +135,33 @@
     .preview-status.paused { cursor: pointer; border-color: var(--accent); background: rgba(18, 22, 20, .88); color: var(--text); font-weight: 600; }
     .preview-status.paused:hover:not(:disabled) { transform: none; filter: none; background: rgba(240, 124, 30, .25); }
     .quality-select { width: auto; padding: 9px 10px; border-radius: 10px; background: var(--surface-2); font-size: .85rem; }
+    .viewer { width: min(1100px, 100%); margin: 0 auto 28px; }
+    .viewer-bar { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+    .nav-btn { flex: 0 0 auto; width: 52px; height: 52px; padding: 0; border-radius: 50%; background: var(--surface-2); color: var(--text); font-size: 1.15rem; }
+    .nav-btn:hover:not(:disabled) { background: var(--accent); color: #fff; }
+    .viewer-title { flex: 1; min-width: 0; text-align: center; } .viewer-title strong { display: block; overflow: hidden; font-size: 1.2rem; text-overflow: ellipsis; white-space: nowrap; } .viewer-title span { color: var(--muted); font-size: .82rem; }
+    .viewer .card .name { display: none; }
+    .tiles-title { margin: 0 0 12px; color: var(--muted); font-size: .95rem; font-weight: 650; }
+    .tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 12px; }
+    .tile { display: flex; flex-direction: column; align-items: stretch; padding: 0; overflow: hidden; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); color: var(--text); text-align: left; }
+    .tile:hover:not(:disabled) { border-color: var(--muted); }
+    .tile.active { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
+    .tile-thumb { display: grid; place-items: center; aspect-ratio: 16 / 9; background: #0b0e0c center / cover no-repeat; color: var(--muted); font-size: 1.6rem; }
+    .tile-name { padding: 9px 11px 0; overflow: hidden; font-size: .9rem; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+    .tile-meta { padding: 2px 11px 11px; color: var(--muted); font-size: .75rem; font-weight: 500; }
+    @media (max-width: 520px) { .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; } .nav-btn { width: 46px; height: 46px; } }
+    .viewer { scroll-margin-top: 96px; }
+    .viewer .preview { max-height: calc(100vh - 250px); }
+    @media (max-width: 720px) { .viewer { scroll-margin-top: 175px; } }
+    .viewer .preview video { max-height: calc(100vh - 250px); aspect-ratio: 16 / 9; }
+    @media (min-width: 1100px) {
+      .stage { display: grid; grid-template-columns: minmax(0, 1fr) 290px; gap: 26px; align-items: start; }
+      .viewer { width: 100%; margin: 0; }
+      .tiles-wrap { position: sticky; top: 96px; max-height: calc(100vh - 116px); overflow-y: auto; padding-right: 4px; }
+      .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+      .tile-name { font-size: .82rem; }
+    }
+    @media (max-width: 720px) { .toolbar-actions { flex-wrap: wrap; } .toolbar-actions .quality-select { flex: 1 1 100%; } .toolbar-actions button { min-width: 0; } }
     @keyframes spin { to { transform: rotate(360deg); } }
     @media (max-width: 720px) { .app-header { align-items: flex-start; } #account { align-items: flex-end; flex-direction: column; gap: 7px; } .toolbar { align-items: flex-start; flex-direction: column; } .toolbar-actions { width: 100%; } .toolbar-actions button { flex: 1; } .timeline-segment-item { grid-template-columns: 1fr auto; } .timeline-segment-item .segment-kind { grid-column: 1 / -1; grid-row: 2; } .recording-selection { align-items: stretch; flex-direction: column; } .recording-actions { justify-content: stretch; } .recording-actions button { flex: 1; } }
     @media (max-width: 480px) { .brand-subtitle { display: none; } .brand-icon { width: 40px; height: 40px; border-radius: 12px; } .header-actions button { width: 38px; overflow: hidden; padding: 8px 0; font-size: 0; } .header-actions button::first-letter { font-size: 1rem; } .card-body { padding: 14px; } }
@@ -151,7 +178,7 @@
     </div>
     <div id="mfaView" class="hidden"><h2>Verificación en dos pasos</h2><p>Completa la verificación que pide tu cuenta Tapo.</p><label for="mfaType">Método de verificación</label><select id="mfaType"></select><button id="requestMfaButton" type="button">Enviar código</button><label for="mfaCode">Código de verificación</label><input id="mfaCode" inputmode="numeric" autocomplete="one-time-code"><button id="verifyMfaButton" type="button" disabled>Verificar código</button><button id="backLoginButton" class="secondary" type="button">Volver</button><div id="mfaInfo" class="login-info" aria-live="polite"></div><div id="mfaError" class="login-error" aria-live="polite"></div></div>
   </div></section>
-  <main id="appView" class="hidden"><div class="toolbar"><div><h2>Tus cámaras</h2><p id="cameraSummary">Cargando cámaras…</p></div><div class="toolbar-actions"><select id="qualitySelect" class="quality-select" title="Calidad del mosaico" aria-label="Calidad del mosaico"><option value="sd">Mosaico ligero (SD)</option><option value="hd">Mosaico en HD</option></select><button id="refreshMainButton" class="secondary" type="button">↻ Actualizar</button><button id="logoutButton" class="danger hidden" type="button" title="Olvidar la sesión de Tapo en el servidor">Desconectar Tapo</button></div></div><div id="grid" class="grid" aria-live="polite"></div></main>
+  <main id="appView" class="hidden"><div class="toolbar"><div><h2>Tus cámaras</h2><p id="cameraSummary">Cargando cámaras…</p></div><div class="toolbar-actions"><select id="qualitySelect" class="quality-select" title="Calidad del video" aria-label="Calidad del video"><option value="hd">Calidad HD</option><option value="sd">Calidad ligera (SD)</option></select><button id="refreshMainButton" class="secondary" type="button">↻ Actualizar</button><button id="logoutButton" class="danger hidden" type="button" title="Olvidar la sesión de Tapo en el servidor">Desconectar Tapo</button></div></div><div class="stage"><section id="viewer" class="viewer"><div class="viewer-bar"><button id="prevCam" class="nav-btn" type="button" aria-label="Cámara anterior" title="Cámara anterior (←)">◀</button><div class="viewer-title"><strong id="viewerName"></strong><span id="viewerCount"></span></div><button id="nextCam" class="nav-btn" type="button" aria-label="Cámara siguiente" title="Cámara siguiente (→)">▶</button></div><div id="viewerCard"></div></section><aside class="tiles-wrap"><h3 class="tiles-title">Todas las cámaras</h3><div id="grid" class="tiles" aria-live="polite"></div></aside></div></main>
   <footer class="app-footer">EC-Cam · motor de video basado en <a href="https://github.com/filirnd/topo" target="_blank" rel="noopener">Topo</a> (licencia MIT)</footer>
   <section id="recordingsModal" class="recordings-modal hidden" role="dialog" aria-modal="true" aria-labelledby="recordingsTitle"><div class="recordings-panel"><header class="recordings-header"><div class="recordings-heading"><h2 id="recordingsTitle">Grabaciones</h2><p id="recordingsSubtitle">Línea de tiempo de la memoria SD</p></div><button id="closeRecordingsButton" class="ghost" type="button">Cerrar</button></header><div class="recordings-body"><div class="recordings-toolbar"><div><h3>Días disponibles</h3><p>Las horas están en la zona horaria de la cámara.</p></div><button id="refreshRecordingsButton" class="secondary" type="button">↻ Actualizar</button></div><div id="recordingsStatus" class="recordings-status" aria-live="polite">Cargando grabaciones…</div><div id="recordingDays" class="recording-days"></div><div id="timelineCard" class="timeline-card hidden"><div id="timelineLoading" class="timeline-loading hidden" aria-live="polite">Cargando línea de tiempo…</div><div class="timeline-topline"><strong id="timelineDate">Línea de tiempo</strong><span id="timelineSummary"></span></div><div class="timeline-hours"><span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span><span>24:00</span></div><div id="timelineTrack" class="timeline-track"></div><div class="timeline-legend"><span>Movimiento / evento</span><span class="continuous">Grabación continua</span></div><div class="timeline-list-heading"><strong>Segmentos grabados</strong><span>Usa la lista cuando los segmentos están muy juntos.</span></div><div id="timelineSegmentList" class="timeline-segment-list"></div><div id="recordingSelection" class="recording-selection">Elige un segmento para ver su hora y duración.</div><div id="recordingPlayerWrap" class="recording-player hidden"><video id="recordingPlayer" controls preload="metadata"></video></div></div></div></div></section>
   <section id="usersModal" class="app-modal hidden" role="dialog" aria-modal="true" aria-labelledby="usersTitle"><div class="app-modal-panel"><header><h2 id="usersTitle">Usuarios de EC-Cam</h2><button class="ghost" type="button" data-close-modal>Cerrar</button></header><div class="app-modal-body"><div id="userList" class="user-list"></div><h3 style="margin:0 0 6px;font-size:.95rem">Agregar usuario</h3><form id="addUserForm" autocomplete="off"><div class="form-row"><div><label for="newUserName">Usuario</label><input id="newUserName" autocapitalize="none" spellcheck="false" required></div><div><label for="newUserRole">Rol</label><select id="newUserRole"><option value="viewer">Visor (solo ver)</option><option value="admin">Administrador</option></select></div></div><label for="newUserPass">Contraseña (mín. 8)</label><input id="newUserPass" type="password" autocomplete="new-password" minlength="8" required><button type="submit">Agregar</button></form><div id="usersMsg" class="form-msg" aria-live="polite"></div><p class="meta" style="margin-top:14px">Visor: ve en vivo, oye audio, mueve la cámara y revisa grabaciones. Administrador: además conecta la cuenta Tapo, activa privacidad y administra usuarios.</p></div></div></section>
@@ -187,8 +214,8 @@
       const entries = new Map();
       let pinned = [];
       let timer = null;
-      let gridQuality = 'sd';
-      try { gridQuality = localStorage.getItem('eccam_quality') === 'hd' ? 'hd' : 'sd'; } catch (_) {}
+      let gridQuality = 'hd';
+      try { gridQuality = localStorage.getItem('eccam_quality2') === 'sd' ? 'sd' : 'hd'; } catch (_) {}
       const observer = 'IntersectionObserver' in window ? new IntersectionObserver(items => {
         items.forEach(item => { const entry = entries.get(item.target); if (entry) entry.visible = item.isIntersecting; });
         schedule();
@@ -294,7 +321,7 @@
         schedule();
         return entry;
       }
-      function setGridQuality(value) { gridQuality = value === 'hd' ? 'hd' : 'sd'; try { localStorage.setItem('eccam_quality', gridQuality); } catch (_) {} refresh(); }
+      function setGridQuality(value) { gridQuality = value === 'hd' ? 'hd' : 'sd'; try { localStorage.setItem('eccam_quality2', gridQuality); } catch (_) {} refresh(); }
       return {register, refresh, setGridQuality, quality: () => gridQuality, qualityOf: card => entries.get(card)?.quality || gridQuality, maxLive};
     })();
     function bindStream(card) {
@@ -466,7 +493,94 @@
     function closeRecordings() { recordingPlayer.pause(); recordingPlayer.removeAttribute('src'); recordingPlayer.load(); recordingPlayerWrap.classList.add('hidden'); recordingsModal.classList.add('hidden'); recordingsState.id = null; recordingsState.preparedClipKey = ''; recordingsState.preparedVideoUrl = ''; timelineCard.classList.add('hidden'); }
     function bindCard(card) { bindStream(card); card.querySelectorAll('.relay-button').forEach(button => button.addEventListener('click', () => checkRelay(button.dataset.id, button, button.closest('.card').querySelector('.result')))); card.querySelectorAll('.privacy-button').forEach(button => button.addEventListener('click', () => setPrivacy(button.dataset.id, button, button.closest('.card')))); card.querySelectorAll('.fullscreen-button').forEach(button => button.addEventListener('click', () => toggleFullscreen(button.closest('.card')))); card.querySelectorAll('.recordings-button').forEach(button => button.addEventListener('click', () => openRecordings(Number(button.dataset.id), button.dataset.name))); card.querySelectorAll('.preview').forEach(preview => { preview.addEventListener('dblclick', () => toggleFullscreen(preview.closest('.card'))); preview.addEventListener('click', event => { const currentCard = preview.closest('.card'); if (fullscreenElement() === currentCard && currentCard.classList.contains('commands-open') && !event.target.closest('button')) toggleCommands(currentCard, currentCard.querySelector('.commands-handle'), false); }); preview.addEventListener('keydown', event => { if ((event.key === 'Enter' || event.key === ' ') && !event.target.closest('button')) { event.preventDefault(); toggleFullscreen(preview.closest('.card')); } }); }); card.querySelectorAll('.commands-handle').forEach(button => button.addEventListener('click', () => toggleCommands(button.closest('.card'), button))); card.querySelectorAll('.movement-toggle').forEach(button => button.addEventListener('click', () => toggleMovement(button, button.closest('.card')))); card.querySelectorAll('.ptz-button').forEach(button => button.addEventListener('click', () => moveCamera(button, button.closest('.card')))); card.querySelectorAll('.step-select').forEach(select => select.addEventListener('change', () => { const result = select.closest('.card').querySelector('.ptz-result'); result.textContent = `Listo · paso ${STEP_VALUES[select.value]}°`; })); }
     async function refreshCard(card, id) { const data = await api(`/api/cameras/${encodeURIComponent(id)}`); if (!data.camera) throw new Error('No hay estado de la cámara.'); const holder = document.createElement('div'); holder.innerHTML = cardMarkup(data.camera); const replacement = holder.firstElementChild; if (!replacement) throw new Error('No se pudo actualizar la tarjeta.'); card.replaceWith(replacement); bindCard(replacement); return replacement; }
-    async function load() { grid.innerHTML = '<div class="empty-state">Cargando cámaras…</div>'; cameraSummary.textContent = 'Conectando con la nube Tapo…'; setState('Actualizando…'); try { const data = await api('/api/cameras'); if (!data.cameras?.length) { grid.innerHTML = '<div class="empty-state">No hay cámaras en esta cuenta.</div>'; cameraSummary.textContent = 'Sin cámaras'; setState('Sin cámaras', 'bad'); return; } grid.innerHTML = data.cameras.map(cardMarkup).join(''); grid.querySelectorAll('.card').forEach(bindCard); cameraSummary.textContent = `${data.cameras.length} ${data.cameras.length === 1 ? 'cámara disponible' : 'cámaras disponibles'}`; setState('En línea', 'ok'); } catch (error) { grid.innerHTML = `<div class="empty-state"><strong>No se pudieron cargar las cámaras</strong><div class="meta">${esc(error.message)}</div><button id="loadRetryButton" type="button">Reintentar</button></div>`; grid.querySelector('#loadRetryButton')?.addEventListener('click', load); cameraSummary.textContent = 'Error de conexión'; setState(error.message === 'login required' ? 'Tapo sin conectar' : 'Nube no disponible', 'bad'); if (error.message === 'login required') showLogin(); } }
+    // ---------- EC-Cam: visor de una cámara + mosaico sin video ----------
+    // Solo transmite la cámara elegida. El mosaico muestra nombre y la última
+    // imagen vista (foto fija, no video). Flechas, deslizar o teclado para
+    // pasar a la siguiente; la anterior se apaga al cambiar.
+    const viewerCard = document.querySelector('#viewerCard'), viewerName = document.querySelector('#viewerName'), viewerCount = document.querySelector('#viewerCount'), viewerSection = document.querySelector('#viewer');
+    const viewerState = {cameras: [], index: -1, thumbs: new Map()};
+    function savedCamera() { try { return localStorage.getItem('eccam_camera') || ''; } catch (_) { return ''; } }
+    function rememberCamera(id) { try { localStorage.setItem('eccam_camera', String(id)); } catch (_) {} }
+    function tileThumb(camera) {
+      const thumb = viewerState.thumbs.get(String(camera.id));
+      if (camera.privacy === true) return '<span class="tile-thumb">🔒</span>';
+      return thumb ? `<span class="tile-thumb" style="background-image:url('${thumb}')"></span>` : '<span class="tile-thumb">📷</span>';
+    }
+    function renderTiles() {
+      grid.innerHTML = viewerState.cameras.map((camera, index) => `<button class="tile${index === viewerState.index ? ' active' : ''}" type="button" data-index="${index}" aria-label="Ver ${esc(camera.name)}">${tileThumb(camera)}<span class="tile-name">${esc(camera.name)}</span><span class="tile-meta">${camera.privacy === true ? 'Privacidad activada' : esc(camera.model || 'Cámara')}</span></button>`).join('');
+      grid.querySelectorAll('.tile').forEach(tile => tile.addEventListener('click', () => {
+        selectCamera(Number(tile.dataset.index));
+        const top = viewerSection.getBoundingClientRect().top;
+        if (top < 0 || top > window.innerHeight * 0.5) viewerSection.scrollIntoView({behavior: 'smooth', block: 'start'});
+      }));
+    }
+    function selectCamera(index) {
+      const total = viewerState.cameras.length;
+      if (!total) return;
+      index = ((index % total) + total) % total;
+      if (fullscreenElement()) { try { (document.exitFullscreen || document.webkitExitFullscreen)?.call(document); } catch (_) {} }
+      viewerState.index = index;
+      const camera = viewerState.cameras[index];
+      viewerCard.innerHTML = cardMarkup(camera);
+      const card = viewerCard.firstElementChild;
+      if (card) bindCard(card);
+      liveVideo.refresh();
+      viewerName.textContent = camera.name;
+      viewerCount.textContent = `${index + 1} de ${total}`;
+      grid.querySelectorAll('.tile').forEach(tile => tile.classList.toggle('active', Number(tile.dataset.index) === index));
+      rememberCamera(camera.id);
+    }
+    async function load() {
+      grid.innerHTML = '<div class="empty-state">Cargando cámaras…</div>'; viewerCard.innerHTML = ''; viewerName.textContent = ''; viewerCount.textContent = '';
+      cameraSummary.textContent = 'Conectando con la nube Tapo…'; setState('Actualizando…');
+      try {
+        const data = await api('/api/cameras');
+        if (!data.cameras?.length) { grid.innerHTML = '<div class="empty-state">No hay cámaras en esta cuenta.</div>'; viewerSection.classList.add('hidden'); cameraSummary.textContent = 'Sin cámaras'; setState('Sin cámaras', 'bad'); return; }
+        viewerSection.classList.remove('hidden');
+        viewerState.cameras = data.cameras;
+        const saved = savedCamera();
+        let start = viewerState.cameras.findIndex(camera => String(camera.id) === saved);
+        if (start < 0) start = Math.max(0, viewerState.cameras.findIndex(camera => camera.privacy !== true));
+        viewerState.index = start;
+        renderTiles();
+        selectCamera(start);
+        cameraSummary.textContent = `${data.cameras.length} ${data.cameras.length === 1 ? 'cámara' : 'cámaras'} · toca una para verla`;
+        setState('En línea', 'ok');
+      } catch (error) {
+        viewerSection.classList.add('hidden');
+        grid.innerHTML = `<div class="empty-state"><strong>No se pudieron cargar las cámaras</strong><div class="meta">${esc(error.message)}</div><button id="loadRetryButton" type="button">Reintentar</button></div>`;
+        grid.querySelector('#loadRetryButton')?.addEventListener('click', load);
+        cameraSummary.textContent = 'Error de conexión';
+        setState(error.message === 'login required' ? 'Tapo sin conectar' : 'Nube no disponible', 'bad');
+        if (error.message === 'login required') showLogin();
+      }
+    }
+    document.querySelector('#prevCam').addEventListener('click', () => selectCamera(viewerState.index - 1));
+    document.querySelector('#nextCam').addEventListener('click', () => selectCamera(viewerState.index + 1));
+    document.addEventListener('keydown', event => {
+      if (!recordingsModal.classList.contains('hidden') || event.target.closest('input, select, textarea') || document.querySelector('.app-modal:not(.hidden)')) return;
+      if (event.key === 'ArrowLeft') selectCamera(viewerState.index - 1);
+      if (event.key === 'ArrowRight') selectCamera(viewerState.index + 1);
+    });
+    (() => {
+      let startX = 0, startY = 0, tracking = false;
+      viewerCard.addEventListener('touchstart', event => { if (event.target.closest('button, input, select, .movement-panel')) { tracking = false; return; } const touch = event.touches[0]; startX = touch.clientX; startY = touch.clientY; tracking = true; }, {passive: true});
+      viewerCard.addEventListener('touchend', event => { if (!tracking) return; tracking = false; const touch = event.changedTouches[0], dx = touch.clientX - startX, dy = touch.clientY - startY; if (Math.abs(dx) > 60 && Math.abs(dy) < 50) selectCamera(viewerState.index + (dx < 0 ? 1 : -1)); }, {passive: true});
+    })();
+    // Foto fija para el mosaico: la última imagen vista de cada cámara.
+    const thumbCanvas = document.createElement('canvas');
+    setInterval(() => {
+      const video = viewerCard.querySelector('video'), camera = viewerState.cameras[viewerState.index];
+      if (!video || !camera || video.readyState < 2 || !video.videoWidth) return;
+      thumbCanvas.width = 320; thumbCanvas.height = Math.round(320 * video.videoHeight / video.videoWidth);
+      try {
+        thumbCanvas.getContext('2d').drawImage(video, 0, 0, thumbCanvas.width, thumbCanvas.height);
+        const url = thumbCanvas.toDataURL('image/jpeg', 0.6);
+        viewerState.thumbs.set(String(camera.id), url);
+        const thumb = grid.querySelector(`.tile[data-index="${viewerState.index}"] .tile-thumb`);
+        if (thumb) { thumb.textContent = ''; thumb.style.backgroundImage = `url('${url}')`; }
+      } catch (_) {}
+    }, 5000);
     function fullscreenElement() { return document.fullscreenElement || document.webkitFullscreenElement || null; }
     function updateFullscreenButtons() { const active = fullscreenElement(); document.querySelectorAll('.card').forEach(card => { const activeCard = card === active; card.classList.toggle('is-fullscreen', activeCard); if (!activeCard) { card.classList.remove('commands-open'); const handle = card.querySelector('.commands-handle'); if (handle) { handle.setAttribute('aria-expanded', 'false'); handle.textContent = 'Controles'; } } if (card.classList.contains('movement-open')) positionMovementPanel(card); }); document.querySelectorAll('.fullscreen-button').forEach(button => { button.textContent = button.closest('.card') === active ? '⛶ Salir de pantalla completa' : '⛶ Pantalla completa'; }); }
     function positionMovementPanel(card) { const panel = card.querySelector('.movement-panel'), control = card.querySelector('.movement-control'); if (!panel || !control) return; panel.classList.remove('opens-up', 'detached'); if (panel.classList.contains('hidden') || fullscreenElement() === card || card.classList.contains('is-fullscreen')) return; const controlRect = control.getBoundingClientRect(), panelRect = panel.getBoundingClientRect(), padding = 16, gap = 10; const fitsBelow = panelRect.height <= window.innerHeight - controlRect.bottom - gap - padding; const fitsAbove = panelRect.height <= controlRect.top - gap - padding; if (!fitsBelow && fitsAbove) panel.classList.add('opens-up'); else if (!fitsBelow) panel.classList.add('detached'); }

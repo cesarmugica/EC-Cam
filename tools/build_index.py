@@ -232,6 +232,46 @@ R('    @keyframes spin', """    .preview-status.paused { cursor: pointer; border
 R("    (async function init() {", """    const qualitySelect = document.querySelector('#qualitySelect'); qualitySelect.value = liveVideo.quality(); qualitySelect.addEventListener('change', () => liveVideo.setGridQuality(qualitySelect.value));
     (async function init() {""")
 
+# ---------- EC-Cam: visor de una cámara + mosaico sin video ----------
+R('<div id="grid" class="grid" aria-live="polite"></div>',
+  '<div class="stage"><section id="viewer" class="viewer"><div class="viewer-bar"><button id="prevCam" class="nav-btn" type="button" aria-label="Cámara anterior" title="Cámara anterior (←)">◀</button><div class="viewer-title"><strong id="viewerName"></strong><span id="viewerCount"></span></div><button id="nextCam" class="nav-btn" type="button" aria-label="Cámara siguiente" title="Cámara siguiente (→)">▶</button></div><div id="viewerCard"></div></section><aside class="tiles-wrap"><h3 class="tiles-title">Todas las cámaras</h3><div id="grid" class="tiles" aria-live="polite"></div></aside></div>')
+load_start = s.find('    async function load() {')
+load_end = s.find('\n', load_start)
+if load_start < 0:
+    missing.append(('load()', 0))
+else:
+    s = s[:load_start] + (base.parent / "tools" / "viewer.js").read_text(encoding="utf-8").rstrip('\n') + s[load_end:]
+R('<option value="sd">Mosaico ligero (SD)</option><option value="hd">Mosaico en HD</option>', '<option value="hd">Calidad HD</option><option value="sd">Calidad ligera (SD)</option>')
+R('title="Calidad del mosaico" aria-label="Calidad del mosaico"', 'title="Calidad del video" aria-label="Calidad del video"')
+R('    @keyframes spin', """    .viewer { width: min(1100px, 100%); margin: 0 auto 28px; }
+    .viewer-bar { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+    .nav-btn { flex: 0 0 auto; width: 52px; height: 52px; padding: 0; border-radius: 50%; background: var(--surface-2); color: var(--text); font-size: 1.15rem; }
+    .nav-btn:hover:not(:disabled) { background: var(--accent); color: #fff; }
+    .viewer-title { flex: 1; min-width: 0; text-align: center; } .viewer-title strong { display: block; overflow: hidden; font-size: 1.2rem; text-overflow: ellipsis; white-space: nowrap; } .viewer-title span { color: var(--muted); font-size: .82rem; }
+    .viewer .card .name { display: none; }
+    .tiles-title { margin: 0 0 12px; color: var(--muted); font-size: .95rem; font-weight: 650; }
+    .tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 12px; }
+    .tile { display: flex; flex-direction: column; align-items: stretch; padding: 0; overflow: hidden; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); color: var(--text); text-align: left; }
+    .tile:hover:not(:disabled) { border-color: var(--muted); }
+    .tile.active { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
+    .tile-thumb { display: grid; place-items: center; aspect-ratio: 16 / 9; background: #0b0e0c center / cover no-repeat; color: var(--muted); font-size: 1.6rem; }
+    .tile-name { padding: 9px 11px 0; overflow: hidden; font-size: .9rem; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+    .tile-meta { padding: 2px 11px 11px; color: var(--muted); font-size: .75rem; font-weight: 500; }
+    @media (max-width: 520px) { .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; } .nav-btn { width: 46px; height: 46px; } }
+    .viewer { scroll-margin-top: 96px; }
+    .viewer .preview { max-height: calc(100vh - 250px); }
+    @media (max-width: 720px) { .viewer { scroll-margin-top: 175px; } }
+    .viewer .preview video { max-height: calc(100vh - 250px); aspect-ratio: 16 / 9; }
+    @media (min-width: 1100px) {
+      .stage { display: grid; grid-template-columns: minmax(0, 1fr) 290px; gap: 26px; align-items: start; }
+      .viewer { width: 100%; margin: 0; }
+      .tiles-wrap { position: sticky; top: 96px; max-height: calc(100vh - 116px); overflow-y: auto; padding-right: 4px; }
+      .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+      .tile-name { font-size: .82rem; }
+    }
+    @media (max-width: 720px) { .toolbar-actions { flex-wrap: wrap; } .toolbar-actions .quality-select { flex: 1 1 100%; } .toolbar-actions button { min-width: 0; } }
+    @keyframes spin""")
+
 if missing:
     print("NO ENCONTRADOS:"); [print(" ", m) for m in missing]; sys.exit(1)
 (base / "index.html").write_text(s, encoding="utf-8")

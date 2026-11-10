@@ -35,7 +35,7 @@ from http.server import ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlsplit
 
-APP_VERSION = "1.0.4"
+APP_VERSION = "1.0.5"
 ROOT = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent))
 EXE_DIR = Path(sys.executable).resolve().parent if getattr(sys, "frozen", False) else ROOT
 WEB_ROOT = ROOT / "web"

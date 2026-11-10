@@ -12,12 +12,13 @@ El motor de video viene de [Topo 0.1.7](https://github.com/filirnd/topo) (licenc
 
 ## Video ligero
 
-- El mosaico va en **SD** (ligero); al abrir una cámara en pantalla completa cambia a **HD** y las demás se pausan. En el mosaico puedes elegir «Mosaico en HD».
-- Solo se transmiten las cámaras que están en pantalla. Abriendo EC-Cam directo en la PC servidor (sin túnel) el navegador solo permite 6 conexiones, así que se ven 4 en vivo a la vez; las demás muestran «En pausa · toca para ver en vivo». Por el túnel de Cloudflare se ven hasta 12.
-- Si la app pasa a segundo plano o se bloquea el celular, el video se detiene y no consume datos.
-- Un visor nuevo entra al instante en el último cuadro clave, sin cortar el video de los demás.
-- Si el video se congela, la página se reconecta sola; si la red es muy lenta, salta al punto en vivo en vez de acumular atraso.
-- Si nadie ve una cámara durante 20 s, el servidor cierra su conexión con Tapo.
+- **Una cámara a la vez:** arriba (o a la izquierda en PC) se ve solo la cámara elegida; se cambia con las flechas ◀ ▶, deslizando el dedo o con las flechas del teclado. La anterior deja de transmitir.
+- **Mosaico sin video:** todas las cámaras aparecen como mosaico con su nombre y la última imagen vista (foto fija).
+- Calidad HD por defecto; el selector «Calidad ligera (SD)» gasta menos datos.
+- Si la app pasa a segundo plano o se bloquea el celular, el video se detiene.
+- Si el video se congela, se reconecta solo; si la red es lenta, salta al punto en vivo.
+- Si nadie ve una cámara durante 20 s, el servidor cierra su conexión con Tapo (volver a ella en ese tiempo es instantáneo).
+- Una cámara desconectada muestra «Cámara sin conexión (según Tapo)» y reintenta cada minuto.
 
 ## Cómo funciona
 
