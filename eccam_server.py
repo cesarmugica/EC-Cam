@@ -35,7 +35,7 @@ from http.server import ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlsplit
 
-APP_VERSION = "1.0.0"
+APP_VERSION = "1.0.1"
 ROOT = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent))
 EXE_DIR = Path(sys.executable).resolve().parent if getattr(sys, "frozen", False) else ROOT
 WEB_ROOT = ROOT / "web"
@@ -154,6 +154,9 @@ class EcCamHandler(engine.Handler):
     trust_local_proxy: bool = True
     server_version = "EC-Cam"
     sys_version = ""
+    # Si el navegador deja de recibir por 20 s (red muy lenta), se corta esa
+    # conexión; la página se reconecta sola en el punto en vivo.
+    timeout = 20
 
     # ---------- utilidades ----------
     def end_headers(self) -> None:

@@ -10,6 +10,15 @@ Ver tus cámaras **Tapo** en vivo desde cualquier lugar, en una página web que 
 
 El motor de video viene de [Topo 0.1.7](https://github.com/filirnd/topo) (licencia MIT, ver `LICENSE-TOPO.txt`).
 
+## Video ligero
+
+- El mosaico va en **SD** (ligero); al abrir una cámara en pantalla completa cambia a **HD** y las demás se pausan. En el mosaico puedes elegir «Mosaico en HD».
+- Solo se transmiten las cámaras que están en pantalla. Abriendo EC-Cam directo en la PC servidor (sin túnel) el navegador solo permite 6 conexiones, así que se ven 4 en vivo a la vez; las demás muestran «En pausa · toca para ver en vivo». Por el túnel de Cloudflare se ven hasta 12.
+- Si la app pasa a segundo plano o se bloquea el celular, el video se detiene y no consume datos.
+- Un visor nuevo entra al instante en el último cuadro clave, sin cortar el video de los demás.
+- Si el video se congela, la página se reconecta sola; si la red es muy lenta, salta al punto en vivo en vez de acumular atraso.
+- Si nadie ve una cámara durante 20 s, el servidor cierra su conexión con Tapo.
+
 ## Cómo funciona
 
 ```

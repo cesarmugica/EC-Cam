@@ -214,6 +214,24 @@ R("infoButton.addEventListener('click', () => { window.location.href = PROJECT_W
 R("(async function init() { try { const data = await api('/api/session'); if (data.authenticated) { showApp(); await load(); } else if (data.mfa_pending) showMfa(data.mfa_types); else showLogin(); } catch (_) { showLogin(); } })();",
   (base.parent / "tools" / "index_extra.js").read_text(encoding="utf-8").strip())
 
+# ---------- EC-Cam: video ligero ----------
+R('<video class="live-native-video" autoplay muted playsinline preload="auto" src="/stream/${encodeURIComponent(camera.id)}.mp4?native=${Date.now()}"',
+  '<video class="live-native-video" muted playsinline preload="none"')
+start = s.find('    function bindStream(card) {')
+end = s.find("    document.addEventListener('click', event => { const button = event.target.closest('.audio-toggle');")
+if start < 0 or end < start:
+    missing.append(('bindStream block', 0))
+else:
+    s = s[:start] + (base.parent / "tools" / "stream_client.js").read_text(encoding="utf-8") + s[end:]
+R('<div class="toolbar-actions"><button id="refreshMainButton"',
+  '<div class="toolbar-actions"><select id="qualitySelect" class="quality-select" title="Calidad del mosaico" aria-label="Calidad del mosaico"><option value="sd">Mosaico ligero (SD)</option><option value="hd">Mosaico en HD</option></select><button id="refreshMainButton"')
+R('    @keyframes spin', """    .preview-status.paused { cursor: pointer; border-color: var(--accent); background: rgba(18, 22, 20, .88); color: var(--text); font-weight: 600; }
+    .preview-status.paused:hover:not(:disabled) { transform: none; filter: none; background: rgba(240, 124, 30, .25); }
+    .quality-select { width: auto; padding: 9px 10px; border-radius: 10px; background: var(--surface-2); font-size: .85rem; }
+    @keyframes spin""")
+R("    (async function init() {", """    const qualitySelect = document.querySelector('#qualitySelect'); qualitySelect.value = liveVideo.quality(); qualitySelect.addEventListener('change', () => liveVideo.setGridQuality(qualitySelect.value));
+    (async function init() {""")
+
 if missing:
     print("NO ENCONTRADOS:"); [print(" ", m) for m in missing]; sys.exit(1)
 (base / "index.html").write_text(s, encoding="utf-8")

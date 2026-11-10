@@ -18,8 +18,10 @@ import json
 import mimetypes
 import os
 import queue
+import select
 import shutil
 import socket
+import struct
 import ssl
 import subprocess
 import sys
@@ -54,6 +56,66 @@ NATIVE_STREAM_RESET = object()
 STREAM_RESOLUTION = os.environ.get("TOPO_STREAM_RESOLUTION", "HD").strip().upper()
 if STREAM_RESOLUTION not in {"HD", "SD"}:
     STREAM_RESOLUTION = "HD"
+# EC-Cam: si nadie ve una cámara durante este tiempo, se cierra su relay.
+RELAY_IDLE_SECONDS = 20.0
+# EC-Cam: fragmentos MP4 pendientes que toleramos para un visor lento antes de
+# desconectarlo (se reconecta solo y entra en el último cuadro clave).
+NATIVE_MAX_BACKLOG = 90
+# EC-Cam: tope de fragmentos guardados desde el último cuadro clave.
+GOP_CACHE_MAX = 240
+
+
+def _iter_boxes(data: bytes, start: int = 0, end: int | None = None):
+    """Recorre cajas MP4 (tamaño, tipo) dentro de data[start:end]."""
+    end = len(data) if end is None else end
+    offset = start
+    while offset + 8 <= end:
+        size = int.from_bytes(data[offset : offset + 4], "big")
+        kind = data[offset + 4 : offset + 8]
+        if size == 1 and offset + 16 <= end:
+            size = int.from_bytes(data[offset + 8 : offset + 16], "big")
+        if size < 8:
+            return
+        yield kind, offset, size
+        offset += size
+
+
+def moof_is_keyframe(moof: bytes) -> bool:
+    """True si el primer cuadro del fragmento es un cuadro clave (sync sample)."""
+    for kind, offset, size in _iter_boxes(moof, 8, len(moof)):
+        if kind != b"traf":
+            continue
+        default_flags = None
+        first_flags = None
+        for kind2, off2, size2 in _iter_boxes(moof, offset + 8, offset + size):
+            flags = int.from_bytes(moof[off2 + 9 : off2 + 12], "big")
+            pos = off2 + 12
+            if kind2 == b"tfhd":
+                pos += 4  # track_ID
+                if flags & 0x01:
+                    pos += 8
+                if flags & 0x02:
+                    pos += 4
+                if flags & 0x08:
+                    pos += 4
+                if flags & 0x10:
+                    pos += 4
+                if flags & 0x20:
+                    default_flags = int.from_bytes(moof[pos : pos + 4], "big")
+            elif kind2 == b"trun":
+                pos += 4  # sample_count
+                if flags & 0x01:
+                    pos += 4
+                if flags & 0x04:
+                    first_flags = int.from_bytes(moof[pos : pos + 4], "big")
+                elif flags & 0x400:
+                    pos += 4 * bool(flags & 0x100) + 4 * bool(flags & 0x200)
+                    first_flags = int.from_bytes(moof[pos : pos + 4], "big")
+        sample_flags = first_flags if first_flags is not None else default_flags
+        if sample_flags is None:
+            return False
+        return not (sample_flags & 0x00010000)
+    return False
 
 
 def native_player_path() -> Path | None:
@@ -181,10 +243,17 @@ class _MulawTsExtractor:
 class CloudMediaWorker:
     """Keep one cloud relay and one FFmpeg decoder per camera."""
 
-    def __init__(self, client: TapoCloud, base_url: str, device: dict):
+    def __init__(self, client: TapoCloud, base_url: str, device: dict, resolution: str = STREAM_RESOLUTION):
         self.client = client
         self.base_url = base_url
         self.device = device
+        self.resolution = resolution if resolution in {"HD", "SD"} else STREAM_RESOLUTION
+        # Caché desde el último cuadro clave: un visor nuevo entra al instante
+        # sin reiniciar la cámara para los demás.
+        self.gop_cache: list[bytes] = []
+        # Visores que ya recibieron encabezado + cuadro clave.
+        self.native_started: set = set()
+        self.relay_with_native = False
         self.subscribers: set[queue.Queue[bytes]] = set()
         self.audio_subscribers: set[queue.Queue[bytes]] = set()
         self.native_video_subscribers: set[queue.Queue[bytes]] = set()
@@ -224,8 +293,9 @@ class CloudMediaWorker:
         # already opened the relay without audio, wake alone cannot add an
         # encoder to that existing session; force a per-camera reconnect so
         # _relay_once() starts with needs_audio_decoder=True.
-        if first_audio_subscriber:
-            self._interrupt_relay()
+        # EC-Cam: el codificador de audio se arranca dentro del relay en curso
+        # (ver _relay_once), así activar audio ya no corta el video.
+        del first_audio_subscriber
         self.wake.set()
         return subscriber
 
@@ -244,12 +314,20 @@ class CloudMediaWorker:
                 # a new subscriber an init header belonging to an old relay.
                 self.native_init_segment = b""
                 init_segment = b""
-        if init_segment:
-            subscriber.put_nowait(init_segment)
+                self.gop_cache = []
+            # EC-Cam: entrar desde el último cuadro clave (fragmentos completos).
+            if init_segment and self.gop_cache:
+                subscriber.put_nowait(init_segment)
+                for fragment in self.gop_cache:
+                    subscriber.put_nowait(fragment)
+                self.native_started.add(subscriber)
+            relay_with_native = self.relay_with_native
         self.last_error = ""
         # The remuxer needs the beginning of a fresh MPEG-TS stream so it can
         # copy the H.264 configuration into the fragmented MP4 init segment.
-        if not native_video_running:
+        # EC-Cam: solo si el relay actual NO trae video (p. ej. solo audio);
+        # si ya arrancó con video, el visor se une sin cortar a nadie.
+        if not native_video_running and not relay_with_native:
             self._interrupt_relay()
         self.wake.set()
         return subscriber
@@ -265,6 +343,8 @@ class CloudMediaWorker:
             subscribers = tuple(self.native_video_subscribers)
             self.native_video_running = False
             self.native_init_segment = b""
+            self.gop_cache = []
+            self.native_started.clear()
         for subscriber in subscribers:
             try:
                 while True:
@@ -279,6 +359,7 @@ class CloudMediaWorker:
     def unsubscribe_native_video(self, subscriber: queue.Queue[bytes]) -> None:
         with self.lock:
             self.native_video_subscribers.discard(subscriber)
+            self.native_started.discard(subscriber)
 
     def start_native_player(self) -> dict:
         player_path = native_player_path()
@@ -417,23 +498,38 @@ class CloudMediaWorker:
                 except queue.Full:
                     pass
 
-    def _broadcast_native_video(self, chunk: bytes) -> None:
+    def _broadcast_native_video(self, fragment: bytes, keyframe: bool) -> None:
+        """Enviar un fragmento MP4 completo (moof+mdat) a todos los visores."""
         with self.lock:
-            subscribers = tuple(self.native_video_subscribers)
-        for subscriber in subscribers:
-            try:
-                subscriber.put_nowait(chunk)
-            except queue.Full:
-                # Keep the newest MP4 fragment; an old fragment is not useful
-                # for a live player that is already behind real time.
+            if keyframe:
+                self.gop_cache = [fragment]
+            elif self.gop_cache and len(self.gop_cache) < GOP_CACHE_MAX:
+                self.gop_cache.append(fragment)
+            slow = []
+            init_segment = self.native_init_segment
+            for subscriber in self.native_video_subscribers:
+                if subscriber not in self.native_started:
+                    # Visor nuevo: empieza en un cuadro clave, con encabezado.
+                    if keyframe and init_segment:
+                        subscriber.put_nowait(init_segment)
+                        subscriber.put_nowait(fragment)
+                        self.native_started.add(subscriber)
+                    continue
+                if subscriber.qsize() > NATIVE_MAX_BACKLOG:
+                    slow.append(subscriber)
+                    continue
+                subscriber.put_nowait(fragment)
+            # Un visor que no alcanza a descargar (red lenta) se desconecta en
+            # vez de acumular memoria; su página se reconecta sola al instante.
+            for subscriber in slow:
+                self.native_video_subscribers.discard(subscriber)
+                self.native_started.discard(subscriber)
                 try:
-                    subscriber.get_nowait()
+                    while True:
+                        subscriber.get_nowait()
                 except queue.Empty:
                     pass
-                try:
-                    subscriber.put_nowait(chunk)
-                except queue.Full:
-                    pass
+                subscriber.put_nowait(NATIVE_STREAM_RESET)
 
     def _run(self) -> None:
         while not self.stop.is_set():
@@ -474,10 +570,16 @@ class CloudMediaWorker:
             "rootCaVer": "1",
             "streamType": 0,
             "preConnection": 0,
-            "resolution": STREAM_RESOLUTION,
+            "resolution": self.resolution,
         }
         response = self.client.post_cipc("/v2/relay/request", request_param, player_id)
         relay_info = result_of(response)
+        if (error_code(response) != 0 or not isinstance(relay_info, dict)) and self.resolution != "HD":
+            # EC-Cam: si la cámara no acepta SD, usar HD.
+            print(f"EC-Cam: la cámara no aceptó {self.resolution}; se usa HD.", flush=True)
+            self.resolution = request_param["resolution"] = "HD"
+            response = self.client.post_cipc("/v2/relay/request", request_param, player_id)
+            relay_info = result_of(response)
         if error_code(response) != 0 or not isinstance(relay_info, dict):
             raise RuntimeError(f"relay rejected: code={error_code(response)}")
         relay_url = str(relay_info.get("relayUrl") or "")
@@ -531,7 +633,9 @@ class CloudMediaWorker:
             needs_video_decoder = bool(self.subscribers)
             needs_audio_decoder = bool(self.audio_subscribers)
             needs_native_video = bool(self.native_video_subscribers)
+            self.relay_with_native = needs_native_video
         native_process = None
+        idle_since: float | None = None
         try:
             with socket.create_connection((host, parsed.port or 443), timeout=15) as plain_socket:
                 with self.client.verify_context.wrap_socket(
@@ -665,6 +769,23 @@ class CloudMediaWorker:
                         native_video_thread.start()
                     tls_socket.settimeout(20)
                     while not self.stop.is_set():
+                        # EC-Cam: audio activado a media transmisión: arrancar
+                        # el codificador aquí, sin reiniciar el video.
+                        if audio_ffmpeg is None and self._has_audio_subscribers():
+                            audio_ffmpeg, audio_thread = self._start_audio_encoder()
+                        # EC-Cam: cerrar el relay si ya nadie mira esta cámara.
+                        with self.lock:
+                            watched = bool(
+                                self.subscribers or self.audio_subscribers or self.native_video_subscribers
+                            )
+                        with self.native_lock:
+                            watched = watched or bool(self.native_requested and self.native_process)
+                        if watched:
+                            idle_since = None
+                        elif idle_since is None:
+                            idle_since = time.monotonic()
+                        elif time.monotonic() - idle_since > RELAY_IDLE_SECONDS:
+                            break
                         boundary = self._read_line(tls_socket, buffer)
                         if not boundary:
                             continue
@@ -733,6 +854,8 @@ class CloudMediaWorker:
                         if self.relay_socket is tls_socket:
                             self.relay_socket = None
         finally:
+            with self.lock:
+                self.relay_with_native = False
             if not self.stop.is_set() and needs_native_video:
                 self._broadcast_native_reset()
             with self.relay_lock:
@@ -934,28 +1057,51 @@ class CloudMediaWorker:
                 self._broadcast(frame)
 
     def _read_native_video(self, ffmpeg: subprocess.Popen) -> None:
+        """Leer el MP4 fragmentado de FFmpeg y repartirlo en cajas completas.
+
+        EC-Cam: Topo repartía trozos de 16 KB sin respetar las cajas MP4; un
+        visor que entraba a media transmisión recibía un fragmento cortado, el
+        navegador fallaba y se reconectaba en bucle. Aquí se reparten solo
+        fragmentos completos (moof+mdat) y se recuerda el último cuadro clave.
+        """
         if ffmpeg.stdout is None:
             return
         read1 = getattr(ffmpeg.stdout, "read1", ffmpeg.stdout.read)
-        init_buffer = bytearray()
-        init_segment_saved = False
+        buffer = bytearray()
+        init = bytearray()
+        init_done = False
+        pending_moof = b""
         while True:
-            chunk = read1(16384)
+            chunk = read1(65536)
             if not chunk:
                 return
-            if not init_segment_saved:
-                init_buffer.extend(chunk)
-                # The fragmented MP4 stream starts with ftyp + moov and then
-                # the first moof. Cache the bytes before that first moof so a
-                # browser subscribing after remuxer startup can still receive
-                # a complete Media Source initialization segment.
-                moof = init_buffer.find(b"moof")
-                if moof >= 4:
-                    init_segment = bytes(init_buffer[: moof - 4])
-                    with self.lock:
-                        self.native_init_segment = init_segment
-                    init_segment_saved = True
-            self._broadcast_native_video(chunk)
+            buffer.extend(chunk)
+            while len(buffer) >= 8:
+                size = int.from_bytes(buffer[0:4], "big")
+                if size == 1:
+                    if len(buffer) < 16:
+                        break
+                    size = int.from_bytes(buffer[8:16], "big")
+                if size < 8:
+                    raise RuntimeError("invalid MP4 box from remuxer")
+                if len(buffer) < size:
+                    break
+                box = bytes(buffer[:size])
+                kind = box[4:8]
+                del buffer[:size]
+                if not init_done:
+                    if kind == b"moof":
+                        with self.lock:
+                            self.native_init_segment = bytes(init)
+                        init_done = True
+                    else:
+                        init.extend(box)
+                        continue
+                if kind == b"moof":
+                    pending_moof = box
+                elif kind == b"mdat" and pending_moof:
+                    self._broadcast_native_video(pending_moof + box, moof_is_keyframe(pending_moof))
+                    pending_moof = b""
 
     def _read_audio(self, ffmpeg: subprocess.Popen) -> None:
         if ffmpeg.stdout is None:
@@ -993,12 +1139,14 @@ class CloudAppState:
         self.recording_jobs_lock = threading.Lock()
         self.recording_dir = Path(tempfile.mkdtemp(prefix="eccam-recordings-"))
 
-    def worker(self, index: int) -> CloudMediaWorker:
+    def worker(self, index: int, quality: str = STREAM_RESOLUTION) -> CloudMediaWorker:
+        quality = quality.upper() if quality and quality.upper() in {"HD", "SD"} else STREAM_RESOLUTION
+        key = index if quality == STREAM_RESOLUTION else (index, quality)
         with self.workers_lock:
-            worker = self.workers.get(index)
+            worker = self.workers.get(key)
             if worker is None:
-                worker = CloudMediaWorker(self.client, self.base_url, self.devices[index])
-                self.workers[index] = worker
+                worker = CloudMediaWorker(self.client, self.base_url, self.devices[index], quality)
+                self.workers[key] = worker
             return worker
 
     def close(self) -> None:
@@ -1012,8 +1160,9 @@ class CloudAppState:
     def reset_worker(self, index: int) -> None:
         """Drop a relay that may have become stale after a camera state change."""
         with self.workers_lock:
-            worker = self.workers.pop(index, None)
-        if worker is not None:
+            keys = [k for k in self.workers if k == index or (isinstance(k, tuple) and k[0] == index)]
+            workers = [self.workers.pop(k) for k in keys]
+        for worker in workers:
             worker.close()
 
     def native_player(self, index: int, enabled: bool) -> dict:
@@ -1550,8 +1699,8 @@ class Handler(BaseHTTPRequestHandler):
             )
         return state
 
-    def stream_mjpeg(self, state: CloudAppState, index: int) -> None:
-        worker = state.worker(index)
+    def stream_mjpeg(self, state: CloudAppState, index: int, quality: str = STREAM_RESOLUTION) -> None:
+        worker = state.worker(index, quality)
         subscriber = worker.subscribe()
         try:
             # Do not expose an HTTP 200 multipart stream until the camera has
@@ -1584,10 +1733,12 @@ class Handler(BaseHTTPRequestHandler):
                 if self.context.current_state() is not state:
                     raise ConnectionError("session ended")
                 try:
-                    frame = subscriber.get(timeout=20)
+                    frame = subscriber.get(timeout=5)
                 except queue.Empty:
                     if worker.last_error:
                         raise ConnectionError(worker.last_error)
+                    if self._client_gone():
+                        raise ConnectionError("client closed")
                     continue
                 self._write_mjpeg_frame(frame)
         except (TimeoutError, RuntimeError) as exc:
@@ -1597,8 +1748,8 @@ class Handler(BaseHTTPRequestHandler):
         finally:
             worker.unsubscribe(subscriber)
 
-    def stream_native_video(self, state: CloudAppState, index: int) -> None:
-        worker = state.worker(index)
+    def stream_native_video(self, state: CloudAppState, index: int, quality: str = STREAM_RESOLUTION) -> None:
+        worker = state.worker(index, quality)
         subscriber = worker.subscribe_native_video()
         try:
             deadline = time.monotonic() + max(STREAM_START_TIMEOUT, 30.0)
@@ -1631,12 +1782,15 @@ class Handler(BaseHTTPRequestHandler):
                 if self.context.current_state() is not state:
                     raise ConnectionError("session ended")
                 try:
-                    chunk = subscriber.get(timeout=20)
+                    chunk = subscriber.get(timeout=5)
                 except queue.Empty:
                     if worker.last_error:
                         raise ConnectionError(worker.last_error)
+                    if self._client_gone():
+                        raise ConnectionError("client closed")
                     continue
                 if chunk is NATIVE_STREAM_RESET:
+                    self._abort_connection()
                     raise ConnectionError("native video relay reset")
                 self.wfile.write(chunk)
                 self.wfile.flush()
@@ -1646,6 +1800,23 @@ class Handler(BaseHTTPRequestHandler):
             pass
         finally:
             worker.unsubscribe_native_video(subscriber)
+
+    def _abort_connection(self) -> None:
+        """EC-Cam: cerrar con RST para que el navegador no reproduzca video
+        viejo que quedó en el búfer y se reconecte de inmediato en vivo."""
+        with contextlib.suppress(OSError):
+            self.connection.setsockopt(socket.SOL_SOCKET, socket.SO_LINGER, struct.pack("ii", 1, 0))
+        self.close_connection = True
+
+    def _client_gone(self) -> bool:
+        """EC-Cam: True si el navegador ya cerró la conexión (aunque no hayamos escrito)."""
+        try:
+            readable, _, _ = select.select([self.connection], [], [], 0)
+            if not readable:
+                return False
+            return self.connection.recv(1, socket.MSG_PEEK) == b""
+        except (OSError, ValueError):
+            return True
 
     def _write_mjpeg_frame(self, frame: bytes) -> None:
         self.wfile.write(
@@ -1669,8 +1840,8 @@ class Handler(BaseHTTPRequestHandler):
         except (BrokenPipeError, ConnectionResetError, OSError):
             pass
 
-    def stream_audio(self, state: CloudAppState, index: int) -> None:
-        worker = state.worker(index)
+    def stream_audio(self, state: CloudAppState, index: int, quality: str = STREAM_RESOLUTION) -> None:
+        worker = state.worker(index, quality)
         subscriber = worker.subscribe_audio()
         try:
             self.send_response(200)
@@ -1683,10 +1854,12 @@ class Handler(BaseHTTPRequestHandler):
                 if self.context.current_state() is not state:
                     raise ConnectionError("session ended")
                 try:
-                    chunk = subscriber.get(timeout=20)
+                    chunk = subscriber.get(timeout=5)
                 except queue.Empty:
                     if worker.last_error:
                         raise ConnectionError(worker.last_error)
+                    if self._client_gone():
+                        raise ConnectionError("client closed")
                     continue
                 self.wfile.write(chunk)
                 self.wfile.flush()
@@ -1694,6 +1867,11 @@ class Handler(BaseHTTPRequestHandler):
             pass
         finally:
             worker.unsubscribe_audio(subscriber)
+
+    @staticmethod
+    def _quality(parsed_url) -> str:
+        value = parse_qs(parsed_url.query).get("q", [STREAM_RESOLUTION])[0].upper()
+        return value if value in {"HD", "SD"} else STREAM_RESOLUTION
 
     def do_GET(self) -> None:  # noqa: N802 - required by BaseHTTPRequestHandler
         parsed_url = urlsplit(self.path)
@@ -1815,7 +1993,7 @@ class Handler(BaseHTTPRequestHandler):
             except (ValueError, IndexError):
                 self.send_json({"ok": False, "error": "invalid camera"}, 404)
                 return
-            self.stream_mjpeg(state, index)
+            self.stream_mjpeg(state, index, self._quality(parsed_url))
             return
         if request_path.startswith("/stream/") and request_path.endswith(".mp4"):
             state = self.require_state()
@@ -1828,7 +2006,7 @@ class Handler(BaseHTTPRequestHandler):
             except (ValueError, IndexError):
                 self.send_json({"ok": False, "error": "invalid camera"}, 404)
                 return
-            self.stream_native_video(state, index)
+            self.stream_native_video(state, index, self._quality(parsed_url))
             return
         if request_path.startswith("/audio/") and request_path.endswith(".mp3"):
             state = self.require_state()
@@ -1841,7 +2019,7 @@ class Handler(BaseHTTPRequestHandler):
             except (ValueError, IndexError):
                 self.send_json({"ok": False, "error": "invalid camera"}, 404)
                 return
-            self.stream_audio(state, index)
+            self.stream_audio(state, index, self._quality(parsed_url))
             return
         if request_path.startswith("/api/cameras/") and request_path.endswith("/relay-check"):
             state = self.require_state()

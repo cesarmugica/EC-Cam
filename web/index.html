@@ -132,6 +132,9 @@
     .form-msg { min-height: 1.3em; margin-top: 8px; font-size: .86rem; } .form-msg.bad { color: #ff8a7a; } .form-msg.ok { color: var(--success); }
     .app-footer { padding: 0 16px 28px; color: var(--muted); font-size: .75rem; text-align: center; } .app-footer a { color: var(--muted); }
     @media (max-width: 520px) { .form-row { grid-template-columns: 1fr; } }
+    .preview-status.paused { cursor: pointer; border-color: var(--accent); background: rgba(18, 22, 20, .88); color: var(--text); font-weight: 600; }
+    .preview-status.paused:hover:not(:disabled) { transform: none; filter: none; background: rgba(240, 124, 30, .25); }
+    .quality-select { width: auto; padding: 9px 10px; border-radius: 10px; background: var(--surface-2); font-size: .85rem; }
     @keyframes spin { to { transform: rotate(360deg); } }
     @media (max-width: 720px) { .app-header { align-items: flex-start; } #account { align-items: flex-end; flex-direction: column; gap: 7px; } .toolbar { align-items: flex-start; flex-direction: column; } .toolbar-actions { width: 100%; } .toolbar-actions button { flex: 1; } .timeline-segment-item { grid-template-columns: 1fr auto; } .timeline-segment-item .segment-kind { grid-column: 1 / -1; grid-row: 2; } .recording-selection { align-items: stretch; flex-direction: column; } .recording-actions { justify-content: stretch; } .recording-actions button { flex: 1; } }
     @media (max-width: 480px) { .brand-subtitle { display: none; } .brand-icon { width: 40px; height: 40px; border-radius: 12px; } .header-actions button { width: 38px; overflow: hidden; padding: 8px 0; font-size: 0; } .header-actions button::first-letter { font-size: 1rem; } .card-body { padding: 14px; } }
@@ -148,7 +151,7 @@
     </div>
     <div id="mfaView" class="hidden"><h2>Verificación en dos pasos</h2><p>Completa la verificación que pide tu cuenta Tapo.</p><label for="mfaType">Método de verificación</label><select id="mfaType"></select><button id="requestMfaButton" type="button">Enviar código</button><label for="mfaCode">Código de verificación</label><input id="mfaCode" inputmode="numeric" autocomplete="one-time-code"><button id="verifyMfaButton" type="button" disabled>Verificar código</button><button id="backLoginButton" class="secondary" type="button">Volver</button><div id="mfaInfo" class="login-info" aria-live="polite"></div><div id="mfaError" class="login-error" aria-live="polite"></div></div>
   </div></section>
-  <main id="appView" class="hidden"><div class="toolbar"><div><h2>Tus cámaras</h2><p id="cameraSummary">Cargando cámaras…</p></div><div class="toolbar-actions"><button id="refreshMainButton" class="secondary" type="button">↻ Actualizar</button><button id="logoutButton" class="danger hidden" type="button" title="Olvidar la sesión de Tapo en el servidor">Desconectar Tapo</button></div></div><div id="grid" class="grid" aria-live="polite"></div></main>
+  <main id="appView" class="hidden"><div class="toolbar"><div><h2>Tus cámaras</h2><p id="cameraSummary">Cargando cámaras…</p></div><div class="toolbar-actions"><select id="qualitySelect" class="quality-select" title="Calidad del mosaico" aria-label="Calidad del mosaico"><option value="sd">Mosaico ligero (SD)</option><option value="hd">Mosaico en HD</option></select><button id="refreshMainButton" class="secondary" type="button">↻ Actualizar</button><button id="logoutButton" class="danger hidden" type="button" title="Olvidar la sesión de Tapo en el servidor">Desconectar Tapo</button></div></div><div id="grid" class="grid" aria-live="polite"></div></main>
   <footer class="app-footer">EC-Cam · motor de video basado en <a href="https://github.com/filirnd/topo" target="_blank" rel="noopener">Topo</a> (licencia MIT)</footer>
   <section id="recordingsModal" class="recordings-modal hidden" role="dialog" aria-modal="true" aria-labelledby="recordingsTitle"><div class="recordings-panel"><header class="recordings-header"><div class="recordings-heading"><h2 id="recordingsTitle">Grabaciones</h2><p id="recordingsSubtitle">Línea de tiempo de la memoria SD</p></div><button id="closeRecordingsButton" class="ghost" type="button">Cerrar</button></header><div class="recordings-body"><div class="recordings-toolbar"><div><h3>Días disponibles</h3><p>Las horas están en la zona horaria de la cámara.</p></div><button id="refreshRecordingsButton" class="secondary" type="button">↻ Actualizar</button></div><div id="recordingsStatus" class="recordings-status" aria-live="polite">Cargando grabaciones…</div><div id="recordingDays" class="recording-days"></div><div id="timelineCard" class="timeline-card hidden"><div id="timelineLoading" class="timeline-loading hidden" aria-live="polite">Cargando línea de tiempo…</div><div class="timeline-topline"><strong id="timelineDate">Línea de tiempo</strong><span id="timelineSummary"></span></div><div class="timeline-hours"><span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span><span>24:00</span></div><div id="timelineTrack" class="timeline-track"></div><div class="timeline-legend"><span>Movimiento / evento</span><span class="continuous">Grabación continua</span></div><div class="timeline-list-heading"><strong>Segmentos grabados</strong><span>Usa la lista cuando los segmentos están muy juntos.</span></div><div id="timelineSegmentList" class="timeline-segment-list"></div><div id="recordingSelection" class="recording-selection">Elige un segmento para ver su hora y duración.</div><div id="recordingPlayerWrap" class="recording-player hidden"><video id="recordingPlayer" controls preload="metadata"></video></div></div></div></div></section>
   <section id="usersModal" class="app-modal hidden" role="dialog" aria-modal="true" aria-labelledby="usersTitle"><div class="app-modal-panel"><header><h2 id="usersTitle">Usuarios de EC-Cam</h2><button class="ghost" type="button" data-close-modal>Cerrar</button></header><div class="app-modal-body"><div id="userList" class="user-list"></div><h3 style="margin:0 0 6px;font-size:.95rem">Agregar usuario</h3><form id="addUserForm" autocomplete="off"><div class="form-row"><div><label for="newUserName">Usuario</label><input id="newUserName" autocapitalize="none" spellcheck="false" required></div><div><label for="newUserRole">Rol</label><select id="newUserRole"><option value="viewer">Visor (solo ver)</option><option value="admin">Administrador</option></select></div></div><label for="newUserPass">Contraseña (mín. 8)</label><input id="newUserPass" type="password" autocomplete="new-password" minlength="8" required><button type="submit">Agregar</button></form><div id="usersMsg" class="form-msg" aria-live="polite"></div><p class="meta" style="margin-top:14px">Visor: ve en vivo, oye audio, mueve la cámara y revisa grabaciones. Administrador: además conecta la cuenta Tapo, activa privacidad y administra usuarios.</p></div></div></section>
@@ -167,42 +170,129 @@
     function showMfa(types) { const valid = (types || []).map(Number).filter(value => value === 1 || value === 2); mfaType.innerHTML = valid.map(value => `<option value="${value}">${methodName(value)}</option>`).join(''); credentialsView.classList.add('hidden'); mfaView.classList.remove('hidden'); mfaCode.value = ''; verifyMfaButton.disabled = true; mfaInfo.textContent = 'Elige un método y solicita la verificación.'; mfaError.textContent = ''; }
     function showApp() { loginView.classList.add('hidden'); appView.classList.remove('hidden'); logoutButton.classList.toggle('hidden', !isAdmin()); refreshButton.classList.remove('hidden'); }
     function statusBadge(camera) { if (camera.privacy === true) return '<div class="badge-row"><span class="badge privacy">Privacidad</span></div>'; return '<div class="badge-row"><span class="badge">En vivo</span></div>'; }
-    function previewMarkup(camera) { if (camera.privacy === true) return '<div class="privacy-overlay"><strong>Modo privacidad activado</strong><span>Video y audio en pausa</span></div>'; return `<video class="live-native-video" autoplay muted playsinline preload="auto" src="/stream/${encodeURIComponent(camera.id)}.mp4?native=${Date.now()}" aria-label="En vivo ${esc(camera.name)}"></video><audio class="live-audio" preload="none"></audio><div class="audio-controls"><input class="audio-volume" type="range" min="0" max="1" step="0.05" value="1" aria-label="Volumen del audio"><button class="audio-toggle" type="button" aria-pressed="false">🔈 Activar audio</button></div><div class="preview-status loading">Conectando con la cámara…</div><div class="preview-status error hidden">Video no disponible <button class="retry-button" type="button">Reintentar</button></div>`; }
+    function previewMarkup(camera) { if (camera.privacy === true) return '<div class="privacy-overlay"><strong>Modo privacidad activado</strong><span>Video y audio en pausa</span></div>'; return `<video class="live-native-video" muted playsinline preload="none" aria-label="En vivo ${esc(camera.name)}"></video><audio class="live-audio" preload="none"></audio><div class="audio-controls"><input class="audio-volume" type="range" min="0" max="1" step="0.05" value="1" aria-label="Volumen del audio"><button class="audio-toggle" type="button" aria-pressed="false">🔈 Activar audio</button></div><div class="preview-status loading">Conectando con la cámara…</div><div class="preview-status error hidden">Video no disponible <button class="retry-button" type="button">Reintentar</button></div>`; }
     function ptzMarkup(camera) { if (camera.ptz !== true) return `<span class="meta movement-unavailable">${esc(camera.ptz_error ? 'Movimiento no disponible.' : 'Esta cámara no se mueve.')}</span>`; const disabled = camera.privacy === true ? 'disabled' : ''; const panelId = `movement-${esc(camera.id)}`; return `<div class="movement-control"><button class="movement-toggle secondary" type="button" aria-expanded="false" aria-controls="${panelId}">✥ Mover</button><div id="${panelId}" class="movement-panel hidden"><div class="ptz-toolbar"><span class="meta">Paso</span><select class="step-select" aria-label="Paso del movimiento"><option value="small">5°</option><option value="medium" selected>10°</option><option value="large">20°</option></select></div><div class="ptz" aria-label="Controles de movimiento"><span></span><button class="ptz-button up" data-x="0" data-y="1" ${disabled} title="Arriba" aria-label="Arriba">▲</button><span></span><button class="ptz-button left" data-x="-1" data-y="0" ${disabled} title="Izquierda" aria-label="Izquierda">◀</button><button class="ptz-button center" data-x="0" data-y="0" disabled title="Posición actual" aria-label="Posición actual">•</button><button class="ptz-button right" data-x="1" data-y="0" ${disabled} title="Derecha" aria-label="Derecha">▶</button><span></span><button class="ptz-button down" data-x="0" data-y="-1" ${disabled} title="Abajo" aria-label="Abajo">▼</button><span></span></div><div class="meta ptz-result" aria-live="polite">Listo · paso 10°</div></div></div>`; }
     function cardMarkup(camera) { const privacyText = camera.privacy === true ? 'Privacidad activada.' : (camera.privacy === false ? 'Privacidad desactivada.' : 'Estado de privacidad no disponible.'); const privacyClass = camera.privacy === true ? ' privacy-on' : ''; const privacyDisabled = camera.privacy === null ? 'disabled' : ''; const privacyHidden = isAdmin() ? '' : ' hidden'; return `<article class="card" data-id="${esc(camera.id)}" data-name="${esc(camera.name)}"><div class="preview" tabindex="0" role="button" aria-label="Abrir ${esc(camera.name)} en pantalla completa">${statusBadge(camera)}${previewMarkup(camera)}</div><div class="card-body"><div class="card-heading"><div><h3 class="name">${esc(camera.name)}</h3><div class="meta">${esc(camera.model || 'Cámara')} · vía nube Tapo</div></div></div><div class="meta result" aria-live="polite">Lista</div><div class="meta privacy-result${privacyClass}" aria-live="polite">${esc(privacyText)}</div><div class="actions"><button class="relay-button" type="button" data-id="${esc(camera.id)}">Probar conexión</button><button class="secondary privacy-button${privacyHidden}" type="button" data-id="${esc(camera.id)}" data-enabled="${camera.privacy !== true}" ${privacyDisabled}>${camera.privacy === true ? 'Quitar privacidad' : 'Activar privacidad'}</button><button class="secondary fullscreen-button" type="button">⛶ Pantalla completa</button><button class="secondary recordings-button" type="button" data-id="${esc(camera.id)}" data-name="${esc(camera.name)}">▶ Grabaciones</button>${ptzMarkup(camera)}</div></div><button class="commands-handle" type="button" aria-expanded="false">Controles</button></article>`; }
+    // ---------- EC-Cam: administrador de video ligero ----------
+    // - Solo transmite las cámaras visibles en pantalla.
+    // - Con HTTP/1.1 (abriendo la PC servidor directo) el navegador solo abre 6
+    //   conexiones; se limita a 4 en vivo para no atorar las demás.
+    // - Pausa todo si la app está en segundo plano.
+    // - Mosaico en SD (ligero); pantalla completa en HD.
+    // - Vigila congelados y se mantiene cerca del "en vivo".
+    const liveVideo = (() => {
+      const nav = (performance.getEntriesByType && performance.getEntriesByType('navigation')[0]) || {};
+      const multiplexed = /^h[23]/i.test(nav.nextHopProtocol || '');
+      const maxLive = multiplexed ? 12 : 4;
+      const entries = new Map();
+      let pinned = [];
+      let timer = null;
+      let gridQuality = 'sd';
+      try { gridQuality = localStorage.getItem('eccam_quality') === 'hd' ? 'hd' : 'sd'; } catch (_) {}
+      const observer = 'IntersectionObserver' in window ? new IntersectionObserver(items => {
+        items.forEach(item => { const entry = entries.get(item.target); if (entry) entry.visible = item.isIntersecting; });
+        schedule();
+      }, {threshold: 0.15}) : null;
+      function schedule() { clearTimeout(timer); timer = setTimeout(refresh, 120); }
+      function fullscreenCard() { return fullscreenElement() || document.querySelector('.card.is-fullscreen'); }
+      function streamUrl(entry, quality) { return `/stream/${encodeURIComponent(entry.card.dataset.id)}.mp4?q=${quality}&t=${Date.now()}`; }
+      function setOverlay(entry, state, text) {
+        entry.loading.classList.toggle('hidden', state !== 'loading');
+        entry.error.classList.toggle('hidden', state !== 'error');
+        entry.paused.classList.toggle('hidden', state !== 'paused');
+        if (state === 'loading' && text) entry.loading.textContent = text;
+        if (state === 'error' && text) entry.errorText.textContent = text;
+      }
+      function start(entry, quality) {
+        clearTimeout(entry.retryTimer); entry.retryTimer = null;
+        entry.quality = quality; entry.running = true; entry.played = false;
+        entry.lastTime = -1; entry.lastProgress = Date.now();
+        entry.video.src = streamUrl(entry, quality);
+        setOverlay(entry, 'loading', quality === 'hd' ? 'Conectando en HD…' : 'Conectando con la cámara…');
+        const playback = entry.video.play(); if (playback) playback.catch(() => {});
+      }
+      function stop(entry) {
+        clearTimeout(entry.retryTimer); entry.retryTimer = null;
+        entry.running = false;
+        entry.video.pause(); entry.video.removeAttribute('src'); entry.video.load();
+      }
+      function restart(entry, reason) {
+        if (!entry.running && entry.retryTimer) return;
+        stop(entry);
+        const delay = Math.min(1000 * (2 ** entry.attempts), 10000);
+        entry.attempts = Math.min(entry.attempts + 1, 4);
+        setOverlay(entry, 'error', reason);
+        entry.retryTimer = setTimeout(() => { entry.retryTimer = null; if (entry.wanted) start(entry, entry.wantedQuality); }, delay);
+      }
+      function refresh() {
+        clearTimeout(timer);
+        for (const [card, entry] of entries) { if (!card.isConnected || !entry.video.isConnected) { stop(entry); observer?.unobserve(card); entries.delete(card); } }
+        pinned = pinned.filter(card => entries.has(card));
+        const fs = fullscreenCard();
+        let want = [];
+        if (!document.hidden) {
+          if (fs) want = entries.has(fs) ? [fs] : [];
+          else {
+            const visible = [...entries.values()].filter(entry => entry.visible).map(entry => entry.card);
+            const ordered = [...pinned.filter(card => visible.includes(card)), ...visible.filter(card => !pinned.includes(card))];
+            want = ordered.slice(0, maxLive);
+          }
+        }
+        for (const entry of entries.values()) {
+          const wanted = want.includes(entry.card), quality = entry.card === fs ? 'hd' : gridQuality;
+          entry.wanted = wanted; entry.wantedQuality = quality;
+          if (wanted && (!entry.running || entry.quality !== quality) && !entry.retryTimer) start(entry, quality);
+          else if (!wanted && (entry.running || entry.retryTimer)) stop(entry);
+          if (!wanted) setOverlay(entry, entry.visible && !document.hidden && !fs ? 'paused' : 'none');
+        }
+      }
+      function watchdog() {
+        const now = Date.now();
+        for (const entry of entries.values()) {
+          const video = entry.video;
+          if (!entry.running) continue;
+          if (video.currentTime > entry.lastTime + 0.05) { entry.lastTime = video.currentTime; entry.lastProgress = now; }
+          else if (now - entry.lastProgress > (entry.played ? 9000 : 25000)) { restart(entry, 'Video congelado. Reconectando…'); continue; }
+          if (video.buffered.length) {
+            const behind = video.buffered.end(video.buffered.length - 1) - video.currentTime;
+            if (behind > 3) video.currentTime = video.buffered.end(video.buffered.length - 1) - 0.4;
+            else video.playbackRate = behind > 1.2 ? 1.08 : 1;
+          }
+          if (video.paused && entry.played && !document.hidden) { const playback = video.play(); if (playback) playback.catch(() => {}); }
+        }
+        if ([...entries.keys()].some(card => !card.isConnected)) refresh();
+      }
+      setInterval(watchdog, 2000);
+      document.addEventListener('visibilitychange', refresh);
+      document.addEventListener('fullscreenchange', schedule); document.addEventListener('webkitfullscreenchange', schedule);
+      window.addEventListener('online', refresh);
+      function register(card, video, preview) {
+        const old = entries.get(card); if (old) { stop(old); observer?.unobserve(card); }
+        const entry = {card, video, visible: !observer, running: false, wanted: false, quality: '', wantedQuality: gridQuality, attempts: 0, retryTimer: null, lastTime: -1, lastProgress: 0, played: false,
+          loading: preview.querySelector('.preview-status.loading'), error: preview.querySelector('.preview-status.error'), paused: document.createElement('button')};
+        entry.errorText = entry.error.firstChild;
+        entry.paused.type = 'button'; entry.paused.className = 'preview-status paused hidden'; entry.paused.textContent = '▶ En pausa · toca para ver en vivo';
+        preview.appendChild(entry.paused);
+        entry.paused.addEventListener('click', event => { event.stopPropagation(); pinned = [card, ...pinned.filter(item => item !== card)].slice(0, maxLive); refresh(); });
+        const ready = () => { entry.played = true; entry.attempts = 0; entry.lastProgress = Date.now(); setOverlay(entry, 'none'); };
+        video.addEventListener('playing', ready);
+        video.addEventListener('error', () => { if (entry.running) restart(entry, 'Video interrumpido. Reconectando…'); });
+        video.addEventListener('ended', () => { if (entry.running) restart(entry, 'Video interrumpido. Reconectando…'); });
+        entry.error.querySelector('.retry-button')?.addEventListener('click', event => { event.stopPropagation(); entry.attempts = 0; clearTimeout(entry.retryTimer); entry.retryTimer = null; if (entry.wanted) start(entry, entry.wantedQuality); else refresh(); });
+        entries.set(card, entry);
+        observer?.observe(card);
+        schedule();
+        return entry;
+      }
+      function setGridQuality(value) { gridQuality = value === 'hd' ? 'hd' : 'sd'; try { localStorage.setItem('eccam_quality', gridQuality); } catch (_) {} refresh(); }
+      return {register, refresh, setGridQuality, quality: () => gridQuality, qualityOf: card => entries.get(card)?.quality || gridQuality, maxLive};
+    })();
     function bindStream(card) {
       const preview = card.querySelector('.preview'), video = preview.querySelector('.live-native-video'), audio = preview.querySelector('.live-audio'), audioControls = preview.querySelector('.audio-controls'), audioButton = preview.querySelector('.audio-toggle'), volume = preview.querySelector('.audio-volume');
       if (!video) return;
-      const loading = preview.querySelector('.preview-status.loading'), error = preview.querySelector('.preview-status.error');
-      let loadingTimer, reconnectTimer, reconnectAttempt = 0;
-      const streamUrl = () => `/stream/${encodeURIComponent(card.dataset.id)}.mp4?native=${Date.now()}`;
-      const hideLoading = () => loading?.classList.add('hidden');
-      const scheduleLoadingFallback = () => { clearTimeout(loadingTimer); loadingTimer = setTimeout(hideLoading, 3500); };
-      const setStreamState = failed => { if (failed) { clearTimeout(loadingTimer); hideLoading(); } else scheduleLoadingFallback(); error?.classList.toggle('hidden', !failed); };
-      const ready = () => { clearTimeout(loadingTimer); hideLoading(); setStreamState(false); };
-      const scheduleReconnect = reason => {
-        if (reconnectTimer) return;
-        const delay = Math.min(1000 * (2 ** reconnectAttempt), 10000);
-        reconnectAttempt = Math.min(reconnectAttempt + 1, 4);
-        if (reason) { error?.classList.remove('hidden'); error?.firstChild && (error.firstChild.textContent = reason); }
-        reconnectTimer = setTimeout(() => {
-          reconnectTimer = null;
-          video.pause();
-          video.removeAttribute('src');
-          video.load();
-          video.src = streamUrl();
-          video.load();
-          loading?.classList.remove('hidden');
-          setStreamState(false);
-          const playback = video.play();
-          if (playback) playback.catch(() => {});
-        }, delay);
-      };
-      const handleError = () => { setStreamState(true); scheduleReconnect('Video interrumpido. Reconectando…'); };
-      video.addEventListener('loadedmetadata', ready); video.addEventListener('loadeddata', ready); video.addEventListener('canplay', ready); video.addEventListener('playing', () => { ready(); reconnectAttempt = 0; }); video.addEventListener('error', handleError); video.addEventListener('ended', () => scheduleReconnect('El video terminó. Reconectando…'));
-      scheduleLoadingFallback();
-      preview.querySelector('.retry-button')?.addEventListener('click', event => { event.stopPropagation(); reconnectAttempt = 0; scheduleReconnect('Reintentando…'); });
-      if (audio && audioButton && audioControls && volume) { audio.volume = Number(volume.value); const stopAudio = () => { audio.pause(); audio.removeAttribute('src'); audio.load(); audioButton.dataset.audioOn = 'false'; audioButton.setAttribute('aria-pressed', 'false'); audioButton.classList.remove('active'); audioControls.classList.remove('active'); audioButton.disabled = false; audioButton.textContent = '🔈 Activar audio'; }; const startAudio = () => { audioButton.disabled = true; audioButton.textContent = 'Conectando audio…'; audio.volume = Number(volume.value); audio.src = `/audio/${encodeURIComponent(card.dataset.id)}.mp3?stream=${Date.now()}`; audio.load(); const playback = audio.play(); if (playback) playback.catch(() => { stopAudio(); audioButton.textContent = '🔈 Activar audio'; }); }; audioButton.addEventListener('click', event => { event.stopPropagation(); if (audioButton.dataset.audioOn === 'true') stopAudio(); else startAudio(); }); volume.addEventListener('click', event => event.stopPropagation()); volume.addEventListener('input', () => { audio.volume = Number(volume.value); }); audio.addEventListener('playing', () => { audioButton.disabled = false; audioButton.dataset.audioOn = 'true'; audioButton.setAttribute('aria-pressed', 'true'); audioButton.classList.add('active'); audioButton.textContent = '🔇 Silenciar'; }); audio.addEventListener('error', () => { if (audioButton.dataset.audioOn !== 'true') stopAudio(); }); }
+      video.removeAttribute('src'); video.removeAttribute('autoplay'); video.load();
+      liveVideo.register(card, video, preview);
+      if (audio && audioButton && audioControls && volume) { audio.volume = Number(volume.value); const stopAudio = () => { audio.pause(); audio.removeAttribute('src'); audio.load(); audioButton.dataset.audioOn = 'false'; audioButton.setAttribute('aria-pressed', 'false'); audioButton.classList.remove('active'); audioControls.classList.remove('active'); audioButton.disabled = false; audioButton.textContent = '🔈 Activar audio'; }; const startAudio = () => { audioButton.disabled = true; audioButton.textContent = 'Conectando audio…'; audio.volume = Number(volume.value); audio.src = `/audio/${encodeURIComponent(card.dataset.id)}.mp3?q=${liveVideo.qualityOf(card)}&stream=${Date.now()}`; audio.load(); const playback = audio.play(); if (playback) playback.catch(() => { stopAudio(); }); }; audioButton.addEventListener('click', event => { event.stopPropagation(); if (audioButton.dataset.audioOn === 'true') stopAudio(); else startAudio(); }); volume.addEventListener('click', event => event.stopPropagation()); volume.addEventListener('input', () => { audio.volume = Number(volume.value); }); audio.addEventListener('playing', () => { audioButton.disabled = false; audioButton.dataset.audioOn = 'true'; audioButton.setAttribute('aria-pressed', 'true'); audioButton.classList.add('active'); audioButton.textContent = '🔇 Silenciar'; }); audio.addEventListener('error', () => { if (audioButton.dataset.audioOn !== 'true') stopAudio(); }); }
     }
     document.addEventListener('click', event => { const button = event.target.closest('.audio-toggle'); if (!button) return; const controls = button.closest('.audio-controls'); if (!controls) return; controls.classList.toggle('active', button.dataset.audioOn !== 'true'); }, true);
     const recordingsState = {id: null, name: '', dates: [], date: '', preparedClipKey: '', preparedVideoUrl: ''};
@@ -429,6 +519,7 @@
     document.querySelector('#appLogoutButton').addEventListener('click', async () => { try { await api('/api/app/logout', {method: 'POST'}); } catch (_) {} location.replace('/login'); });
     async function checkTapo() { try { const data = await api('/api/session'); if (data.authenticated) { showApp(); await load(); } else if (data.mfa_pending && isAdmin()) showMfa(data.mfa_types); else showLogin(); } catch (_) { showLogin(); } }
     document.querySelector('#viewerRetryButton').addEventListener('click', checkTapo);
+    const qualitySelect = document.querySelector('#qualitySelect'); qualitySelect.value = liveVideo.quality(); qualitySelect.addEventListener('change', () => liveVideo.setGridQuality(qualitySelect.value));
     (async function init() {
       try {
         const session = await api('/api/app/session');
