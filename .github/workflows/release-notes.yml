@@ -1,0 +1,21 @@
+# Actualiza el título y las notas de todos los Releases desde CHANGELOG.md.
+name: Notas de versiones
+
+on:
+  push:
+    branches: [main]
+    paths: [CHANGELOG.md, tools/release_notes.py]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  notes:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Actualizar notas
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 tools/release_notes.py
