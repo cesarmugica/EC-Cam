@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#121614">
-<title>EC-Cam · Sin conexión</title>
+<title>EC-Cam · Servicio detenido</title>
 <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; text-align: center;
@@ -15,16 +15,43 @@
     p { margin-top: 12px; color: rgba(255, 255, 255, .72); font-size: 16px; line-height: 1.55; }
     button { margin-top: 26px; padding: 13px 28px; border: 0; border-radius: 10px; background: #F07C1E; color: #fff; cursor: pointer;
              font: inherit; font-size: 16px; font-weight: 700; }
-    button:hover { filter: brightness(.92); }
+    button:hover, .btn:hover { filter: brightness(.92); }
+    .btn { display: inline-block; margin-top: 26px; padding: 14px 30px; border-radius: 10px; background: #F07C1E; color: #fff;
+           font-size: 17px; font-weight: 700; text-decoration: none; }
+    button.ghost { display: block; margin: 18px auto 0; padding: 10px 22px; background: transparent; border: 1px solid rgba(255,255,255,.25); font-size: 14px; }
+    .hint { margin-top: 14px; font-size: 14px; color: rgba(255, 255, 255, .6); }
 </style>
 </head>
 <body>
 <div class="c">
     <img src="/img/pwa-192.png" alt="EC-Cam">
-    <h1>Sin conexión</h1>
-    <p>No hay internet en este momento, o la PC servidor de EC-Cam está apagada. En cuanto vuelva la conexión, intenta de nuevo.</p>
-    <button type="button" onclick="location.reload()">Reintentar</button>
+    <h1 id="t">El servicio EC-Cam está detenido</h1>
+    <p id="d">EC-Cam necesita su servicio corriendo en esta PC para mostrar tus cámaras.</p>
+    <a id="start" class="btn" href="eccam://start">▶ Iniciar EC-Cam</a>
+    <p id="hint" class="hint">Si el navegador pregunta «¿Abrir EC-Cam?», elige <b>Abrir</b> (y «Permitir siempre»).</p>
+    <p id="wait" class="hint" hidden>Esperando a que arranque…</p>
+    <button type="button" class="ghost" onclick="location.reload()">Reintentar</button>
 </div>
-<script>window.addEventListener('online', function () { location.reload(); });</script>
+<script>
+(function () {
+    var local = /^(127\.0\.0\.1|localhost|\[::1\])$/.test(location.hostname);
+    if (!local) {
+        document.getElementById('t').textContent = 'Sin conexión';
+        document.getElementById('d').textContent = 'No hay internet en este momento. En cuanto vuelva la conexión, intenta de nuevo.';
+        document.getElementById('start').hidden = true; document.getElementById('hint').hidden = true;
+    }
+    window.addEventListener('online', function () { location.reload(); });
+    // Revisar cada 2 s si el servicio ya respondió y entrar solo.
+    function check() {
+        fetch('/api/app/session', { cache: 'no-store' }).then(function (r) {
+            if (r.ok) location.replace('/');
+        }).catch(function () {});
+    }
+    setInterval(check, 2000);
+    document.getElementById('start').addEventListener('click', function () {
+        document.getElementById('wait').hidden = false;
+    });
+})();
+</script>
 </body>
 </html>

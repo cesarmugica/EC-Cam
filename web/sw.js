@@ -5,7 +5,7 @@
    - Solo guarda la página «Sin conexión» y su logo.
    Para publicar cambios en este archivo, sube VERSION.
    ============================================================ */
-const VERSION = 'eccam-v2';
+const VERSION = 'eccam-v3';
 const OFFLINE = '/offline.html';
 const PRECARGA = [OFFLINE, '/img/pwa-192.png'];
 

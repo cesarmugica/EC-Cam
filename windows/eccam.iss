@@ -41,15 +41,23 @@ Name: "desktopicon"; Description: "Crear acceso directo en el escritorio"; Group
 Source: "{#SourceDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
-Name: "{group}\EC-Cam"; Filename: "{app}\eccam-server.exe"; Comment: "Inicia el servidor y abre EC-Cam"
-Name: "{group}\Detener servidor EC-Cam"; Filename: "{sys}\taskkill.exe"; Parameters: "/IM eccam-server.exe /F"; IconFilename: "{app}\eccam-server.exe"
+Name: "{group}\Iniciar EC-Cam"; Filename: "{app}\eccam-server.exe"; Comment: "Inicia el servicio EC-Cam y abre tus cámaras"
+Name: "{group}\Detener servicio EC-Cam"; Filename: "{sys}\taskkill.exe"; Parameters: "/IM eccam-server.exe /F"; IconFilename: "{app}\eccam-server.exe"
 Name: "{group}\Carpeta de datos de EC-Cam"; Filename: "{localappdata}\EC-Cam"
 Name: "{group}\Desinstalar EC-Cam"; Filename: "{uninstallexe}"
-Name: "{userdesktop}\EC-Cam"; Filename: "{app}\eccam-server.exe"; Tasks: desktopicon
-Name: "{userstartup}\EC-Cam servidor"; Filename: "{app}\eccam-server.exe"; Parameters: "--no-browser"; Tasks: autostart
+Name: "{userdesktop}\Iniciar EC-Cam"; Filename: "{app}\eccam-server.exe"; Tasks: desktopicon
+Name: "{userstartup}\Servicio EC-Cam"; Filename: "{app}\eccam-server.exe"; Parameters: "--no-browser"; Tasks: autostart
 
 [Run]
-Filename: "{app}\eccam-server.exe"; Description: "Iniciar EC-Cam ahora"; Flags: nowait postinstall skipifsilent
+; Siempre arrancar el servicio al terminar (antes dependía de una casilla).
+Filename: "{app}\eccam-server.exe"; Flags: nowait skipifsilent
+
+[Registry]
+; Enlace eccam:// para el botón "Iniciar EC-Cam" de la página (por usuario, sin admin).
+Root: HKCU; Subkey: "Software\Classes\eccam"; ValueType: string; ValueName: ""; ValueData: "URL:EC-Cam"; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\eccam"; ValueType: string; ValueName: "URL Protocol"; ValueData: ""
+Root: HKCU; Subkey: "Software\Classes\eccam\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: "{app}\eccam-server.exe,0"
+Root: HKCU; Subkey: "Software\Classes\eccam\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\eccam-server.exe"" --no-browser"
 
 [UninstallRun]
 Filename: "{sys}\taskkill.exe"; Parameters: "/IM eccam-server.exe /F"; Flags: runhidden; RunOnceId: "StopEcCam"
