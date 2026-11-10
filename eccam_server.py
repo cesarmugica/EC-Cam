@@ -33,7 +33,7 @@ from http.server import ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
-APP_VERSION = "1.1.0"
+APP_VERSION = "1.1.1"
 try:  # fecha del instalador, la escribe windows/build.ps1
     from eccam_build import BUILD_DATE  # type: ignore[import-not-found]
 except ImportError:
@@ -253,6 +253,9 @@ class EcCamHandler(engine.Handler):
         if path == "/api/app/relaytest":
             self._relaytest(parse_qs(parsed.query))
             return
+        if path == "/api/app/sdtest":
+            self._sdtest(parse_qs(parsed.query))
+            return
         if path.endswith("/native-player"):
             # El reproductor nativo de Topo abriría ventanas aparte; no se usa.
             self.send_json({"ok": False, "error": "No disponible en EC-Cam."}, 403)
@@ -307,6 +310,24 @@ class EcCamHandler(engine.Handler):
             "ffmpeg": os.environ.get("TOPO_FFMPEG"),
             "workers": workers,
         })
+
+    def _sdtest(self, query: dict) -> None:
+        state = self.context.current_state()
+        if state is None:
+            self.send_json({"ok": False, "error": "Conecta la cuenta Tapo primero."}, 409)
+            return
+        import eccam_sdtest
+
+        try:
+            index = int(query.get("cam", ["0"])[0])
+            state.devices[index]
+            date = query.get("date", [""])[0]
+            if not (len(date) == 8 and date.isdigit()):
+                raise ValueError
+        except (ValueError, IndexError):
+            self.send_json({"ok": False, "error": "Usa ?cam=N&date=AAAAMMDD"}, 400)
+            return
+        self.send_json({"ok": True, **eccam_sdtest.run(state, index, date)})
 
     def _relaytest(self, query: dict) -> None:
         state = self.context.current_state()
