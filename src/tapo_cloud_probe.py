@@ -171,6 +171,29 @@ def clear_session() -> None:
         pass
 
 
+# Estados de la memoria SD que significan «no hay tarjeta».
+_SD_ABSENT = {"offline", "none", "no_card", "nocard", "absent", "not_exist", "notexist", ""}
+
+
+def _sd_card_present(harddisk_manage: object) -> bool:
+    """True si getSdCardStatus muestra una tarjeta (aunque no esté formateada)."""
+    if not isinstance(harddisk_manage, dict):
+        return False
+    infos = harddisk_manage.get("hd_info")
+    if not isinstance(infos, list) or not infos:
+        return False
+    for item in infos:
+        if not isinstance(item, dict):
+            continue
+        for disk in item.values():
+            if not isinstance(disk, dict):
+                continue
+            states = {str(disk.get(key, "")).strip().lower() for key in ("status", "detect_status") if key in disk}
+            if states and not states <= _SD_ABSENT:
+                return True
+    return False
+
+
 class RecordingRefused(RuntimeError):
     """EC-Cam: la cámara contestó la reproducción con un error_code."""
 
@@ -678,10 +701,22 @@ class TapoCloud:
         )
         if len(responses) < 2:
             raise RuntimeError("incomplete SD recording response")
-        sd_result = self._camera_service_result([responses[0]], "getSdCardStatus")
-        date_result = self._camera_service_result(
-            [responses[1]], "searchDateWithVideo"
-        )
+        # EC-Cam: sin memoria SD, getSdCardStatus responde con la tabla pero con
+        # estado "offline", y searchDateWithVideo responde con error. Eso es
+        # «sin memoria SD», no una falla.
+        try:
+            sd_result = self._camera_service_result([responses[0]], "getSdCardStatus")
+        except RuntimeError:
+            sd_result = {}
+        sd_present = _sd_card_present(sd_result.get("harddisk_manage"))
+        try:
+            date_result = self._camera_service_result(
+                [responses[1]], "searchDateWithVideo"
+            )
+        except RuntimeError:
+            if not sd_present:
+                return {"timezone": timezone_name, "sd_available": False, "dates": []}
+            raise
         dates: set[str] = set()
         for item in date_result.get("playback", {}).get("search_results", []):
             if not isinstance(item, dict):
@@ -689,10 +724,9 @@ class TapoCloud:
             for value in item.values():
                 if isinstance(value, dict) and value.get("date"):
                     dates.add(str(value["date"]))
-        sd_data = sd_result.get("harddisk_manage")
         return {
             "timezone": timezone_name,
-            "sd_available": bool(sd_data),
+            "sd_available": sd_present or bool(dates),
             "dates": sorted(dates),
         }
 

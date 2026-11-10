@@ -2,6 +2,9 @@
 
 Cada versión tiene su instalador en [Releases](https://github.com/cesarmugica/EC-Cam/releases). La fecha y hora de cada compilación aparecen dentro de la app, debajo del nombre EC-Cam.
 
+## 2.1.1
+- Las cámaras **sin memoria SD** ahora salen como «— Sin memoria SD» en la prueba y en Grabaciones, en vez de marcarse como falla.
+
 ## 2.1.0 — Probar mis cámaras
 - **🧪 Probar mis cámaras:** prueba en un clic el video en vivo, la lista de grabaciones de la SD y la reproducción de cada cámara, y muestra una tabla con ✅/❌ y el motivo de cada falla. No mueve las cámaras.
 - **📤 Enviar reporte:** abre en GitHub el reporte de compatibilidad ya llenado, uno por cada modelo y firmware. Solo lleva modelo, firmware, versión de EC-Cam y resultados; nunca el nombre de tus cámaras ni datos de tu cuenta Tapo.
