@@ -28,12 +28,13 @@ import shutil
 import subprocess
 import sys
 import threading
+import time
 import webbrowser
 from http.server import ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
-APP_VERSION = "1.1.7"
+APP_VERSION = "1.1.8"
 try:  # fecha del instalador, la escribe windows/build.ps1
     from eccam_build import BUILD_DATE  # type: ignore[import-not-found]
 except ImportError:
@@ -259,6 +260,9 @@ class EcCamHandler(engine.Handler):
         if path == "/api/app/playtest":
             self._playtest(parse_qs(parsed.query))
             return
+        if path.startswith("/recordings/") and path.endswith("/stream.mp4"):
+            self._stream_recording(path[len("/recordings/"):-len("/stream.mp4")])
+            return
         if path.endswith("/native-player"):
             # El reproductor nativo de Topo abriría ventanas aparte; no se usa.
             self.send_json({"ok": False, "error": "No disponible en EC-Cam."}, 403)
@@ -270,10 +274,90 @@ class EcCamHandler(engine.Handler):
         if not self._local_request() or not self._same_origin_post():
             self._forbidden()
             return
+        post_path = urlsplit(self.path).path
+        if post_path.startswith("/api/recording-jobs/") and post_path.endswith("/cancel"):
+            state = self.context.current_state()
+            job_id = post_path[len("/api/recording-jobs/"):-len("/cancel")]
+            cancelled = bool(state and job_id.isalnum() and state.cancel_recording(job_id))
+            self.send_json({"ok": True, "cancelled": cancelled})
+            return
         if urlsplit(self.path).path.endswith("/native-player"):
             self.send_json({"ok": False, "error": "No disponible en EC-Cam."}, 403)
             return
         super().do_POST()
+
+    # ---------- reproducir mientras descarga ----------
+    def _stream_recording(self, job_id: str) -> None:
+        """Mandar al navegador la grabación mientras llega de la cámara.
+
+        La cámara entrega las grabaciones a velocidad normal (1x); esperar el
+        archivo completo hacía que un clip de 1.5 min tardara lo mismo o más
+        en empezar. Aquí se reempaqueta el TS que se va escribiendo a MP4
+        fragmentado (solo video; el audio va en el archivo final/Descargar).
+        """
+        state = self.context.current_state()
+        source = state.recording_stream_source(job_id) if state and job_id.isalnum() else None
+        if source is None:
+            self.send_error(404)
+            return
+        ts_path, downloading = source
+        deadline = time.monotonic() + 40
+        while not (ts_path.is_file() and ts_path.stat().st_size > 64 * 1024):
+            if not downloading() and not ts_path.is_file():
+                self.send_json({"ok": False, "error": "La grabación no está disponible."}, 404)
+                return
+            if time.monotonic() > deadline or not downloading() and ts_path.is_file():
+                break
+            time.sleep(0.25)
+        ffmpeg = subprocess.Popen(
+            [
+                os.environ.get("TOPO_FFMPEG") or "ffmpeg", "-hide_banner", "-loglevel", "error",
+                "-probesize", "500000", "-analyzeduration", "1000000",
+                "-f", "mpegts", "-i", "pipe:0", "-map", "0:v:0", "-c:v", "copy", "-an",
+                "-movflags", "+empty_moov+default_base_moof+frag_keyframe", "-f", "mp4", "pipe:1",
+            ],
+            stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, bufsize=0,
+        )
+
+        def feed() -> None:
+            try:
+                with open(ts_path, "rb") as handle:
+                    while True:
+                        data = handle.read(65536)
+                        if data:
+                            ffmpeg.stdin.write(data)
+                        elif downloading():
+                            time.sleep(0.2)
+                        else:
+                            break
+            except (OSError, ValueError):
+                pass
+            finally:
+                with contextlib.suppress(OSError):
+                    ffmpeg.stdin.close()
+
+        threading.Thread(target=feed, name=f"eccam-rec-{job_id[:8]}", daemon=True).start()
+        try:
+            self.close_connection = True
+            self.send_response(200)
+            self.send_header("Content-Type", "video/mp4")
+            self.send_header("Cache-Control", "no-store")
+            self.send_header("Connection", "close")
+            self.end_headers()
+            read1 = getattr(ffmpeg.stdout, "read1", ffmpeg.stdout.read)
+            while True:
+                chunk = read1(65536)
+                if not chunk:
+                    break
+                self.wfile.write(chunk)
+                self.wfile.flush()
+        except (BrokenPipeError, ConnectionResetError, OSError):
+            pass
+        finally:
+            with contextlib.suppress(OSError):
+                ffmpeg.kill()
+            with contextlib.suppress(OSError, subprocess.TimeoutExpired):
+                ffmpeg.wait(timeout=2)
 
     # ---------- diagnóstico ----------
     def _stream_status(self, query: dict) -> None:

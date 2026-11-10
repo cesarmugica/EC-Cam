@@ -269,6 +269,41 @@ R('    @keyframes spin', """    .viewer { width: min(1100px, 100%); margin: 0 au
     @media (max-width: 720px) { .toolbar-actions { flex-wrap: wrap; } .toolbar-actions .quality-select { flex: 1 1 100%; } .toolbar-actions button { min-width: 0; } }
     @keyframes spin""")
 
+# ---------- EC-Cam: grabaciones — reproducir mientras descarga y cancelar al salir ----------
+R("const created = await api(`/api/cameras/${encodeURIComponent(recordingsState.id)}/recordings/play`, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({start: Number(clip.start), end})});",
+  "const created = await api(`/api/cameras/${encodeURIComponent(recordingsState.id)}/recordings/play`, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({start: Number(clip.start), end})});\n        recordingsState.jobId = created.job_id;\n        if (!isDownload) { recordingPlayer.src = `/recordings/${encodeURIComponent(created.job_id)}/stream.mp4`; recordingPlayerWrap.classList.remove('hidden'); recordingPlayer.load(); recordingPlayer.play().catch(() => {}); }")
+R("""        if (!job || job.status !== 'ready') throw new Error(job?.error || 'Se agotó el tiempo al preparar la grabación.');""",
+  """        if (recordingsState.jobId === created.job_id) recordingsState.jobId = '';
+        if (!job || job.status !== 'ready') throw new Error(job?.error || 'Se agotó el tiempo al preparar la grabación.');""")
+R("""        } else {
+          recordingPlayer.src = job.video_url;
+          recordingPlayerWrap.classList.remove('hidden');
+          recordingPlayer.load();
+          recordingsStatus.className = 'recordings-status';
+          recordingsStatus.textContent = 'Grabación lista.';
+          recordingPlayer.play().catch(() => {});
+        }""", """        } else if (recordingPlayer.currentSrc.includes('/stream.mp4') && !recordingPlayer.error && recordingPlayer.currentTime > 0) {
+          // Ya se está viendo mientras descargaba: no reiniciar el video.
+          recordingsStatus.className = 'recordings-status';
+          recordingsStatus.textContent = 'Grabación completa. «Descargar» la guarda con audio.';
+        } else {
+          recordingPlayer.src = job.video_url;
+          recordingPlayerWrap.classList.remove('hidden');
+          recordingPlayer.load();
+          recordingsStatus.className = 'recordings-status';
+          recordingsStatus.textContent = 'Grabación lista.';
+          recordingPlayer.play().catch(() => {});
+        }""")
+R("""      } catch (error) {
+        recordingsStatus.className = 'recordings-status bad';
+        recordingsState.preparedClipKey = '';""", """      } catch (error) {
+        if (error.message === 'cancelled') return; // se cerró Grabaciones o se eligió otro clip
+        recordingsStatus.className = 'recordings-status bad';
+        recordingsState.preparedClipKey = '';""")
+R("function closeRecordings() {", "function cancelRecordingJob() { const id = recordingsState.jobId; recordingsState.jobId = ''; if (id) fetch(`/api/recording-jobs/${encodeURIComponent(id)}/cancel`, {method: 'POST', credentials: 'same-origin', headers: {'Content-Type': 'application/json'}, body: '{}'}).catch(() => {}); }\n    function closeRecordings() { cancelRecordingJob();")
+R("function selectRecording(clip, segment, listItem) {", "function selectRecording(clip, segment, listItem) {\n      cancelRecordingJob(); recordingPlayer.pause(); recordingPlayer.removeAttribute('src'); recordingPlayer.load();")
+R("    window.addEventListener('resize', repositionOpenMovementPanels);", "    window.addEventListener('pagehide', () => cancelRecordingJob());\n    window.addEventListener('resize', repositionOpenMovementPanels);")
+
 if missing:
     print("NO ENCONTRADOS:"); [print(" ", m) for m in missing]; sys.exit(1)
 (base / "index.html").write_text(s, encoding="utf-8")

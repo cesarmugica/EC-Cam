@@ -1043,6 +1043,7 @@ class TapoCloud:
                                     sock.sendall(self._recording_ack_frame(data_sequence, session_id))
                             if "video/mp2t" in content_type:
                                 output.write(payload)
+                                output.flush()  # EC-Cam: para reproducir mientras descarga
                                 bytes_written += len(payload)
                                 pts.update(payload)
                                 if progress:

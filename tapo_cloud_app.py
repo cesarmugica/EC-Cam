@@ -1433,7 +1433,33 @@ class CloudAppState:
         with self.recording_jobs_lock:
             job_id = self.recording_active.get(index)
             job = self.recording_jobs.get(job_id) if job_id else None
-            return bool(job and job.get("status") == "preparing" and job.get("progress", 0) < 82)
+            return bool(job and job.get("status") == "preparing" and not job.get("cancel") and job.get("progress", 0) < 82)
+
+    def cancel_recording(self, job_id: str) -> bool:
+        """EC-Cam: detener una descarga en curso (al cerrar Grabaciones)."""
+        with self.recording_jobs_lock:
+            job = self.recording_jobs.get(job_id)
+            if not job or job.get("status") != "preparing":
+                return False
+            job["cancel"] = True
+            for index, active in list(self.recording_active.items()):
+                if active == job_id:
+                    self.recording_active.pop(index, None)
+            return True
+
+    def recording_stream_source(self, job_id: str) -> tuple[Path, callable] | None:
+        """EC-Cam: archivo TS que se va llenando y una función que dice si
+        la descarga sigue en curso (para reproducir mientras descarga)."""
+        with self.recording_jobs_lock:
+            if job_id not in self.recording_jobs:
+                return None
+
+        def downloading() -> bool:
+            with self.recording_jobs_lock:
+                job = self.recording_jobs.get(job_id) or {}
+                return job.get("status") == "preparing" and not job.get("cancel") and job.get("progress", 0) < 82
+
+        return self.recording_dir / f"{job_id}.ts", downloading
 
     def start_recording(self, index: int, start: int, end: int) -> str:
         if end <= start:
@@ -1483,6 +1509,12 @@ class CloudAppState:
                     job.update(values)
 
         def report_progress(progress: int, message: str) -> None:
+            # EC-Cam: se llama por cada parte recibida; si el usuario cerró
+            # Grabaciones, cortar aquí para que la cámara quede libre.
+            with self.recording_jobs_lock:
+                cancelled = bool((self.recording_jobs.get(job_id) or {}).get("cancel"))
+            if cancelled:
+                raise RuntimeError("cancelled")
             update_job(progress=max(0, min(progress, 99)), message=message)
 
         try:
