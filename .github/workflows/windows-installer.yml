@@ -1,6 +1,6 @@
 # Compila el instalador de Windows de EC-Cam en GitHub (no se instala nada en tu PC).
-# - Cada push a main: genera EC-Cam-Setup como "artifact" (pestaña Actions).
-# - Cada etiqueta vX.Y.Z: además crea un Release con el .exe para descargar.
+# - Cada push a main compila EC-Cam-Setup (pestaña Actions).
+# - Si APP_VERSION (eccam_server.py) es nueva, publica un Release con el .exe.
 name: Instalador Windows
 
 on:
@@ -39,12 +39,17 @@ jobs:
           path: windows/out/*.exe
           if-no-files-found: error
 
-      - name: Publicar Release
-        if: startsWith(github.ref, 'refs/tags/v')
+      - name: Publicar Release (si la versión es nueva)
+        if: github.ref == 'refs/heads/main'
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           $exe = Get-ChildItem windows/out/*.exe | Select-Object -First 1
+          $version = (Select-String -Path eccam_server.py -Pattern '^APP_VERSION = "(.+)"').Matches[0].Groups[1].Value
+          $tag = "v$version"
+          gh release view $tag *> $null
+          if ($LASTEXITCODE -eq 0) { Write-Host "La versión $tag ya está publicada; súbele APP_VERSION para publicar otra."; exit 0 }
           (Get-FileHash $exe.FullName -Algorithm SHA256).Hash + "  " + $exe.Name | Out-File windows/out/SHA256SUMS.txt -Encoding ascii
-          gh release create "${{ github.ref_name }}" $exe.FullName windows/out/SHA256SUMS.txt --title "EC-Cam ${{ github.ref_name }}" --notes "Instalador de Windows de EC-Cam."
+          gh release create $tag $exe.FullName windows/out/SHA256SUMS.txt --target $env:GITHUB_SHA --title "EC-Cam $tag" --notes "Instalador de Windows de EC-Cam. Descarga EC-Cam-Setup-$version.exe y ejecútalo en la PC servidor."
+          exit 0
