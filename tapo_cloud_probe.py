@@ -171,6 +171,10 @@ def clear_session() -> None:
         pass
 
 
+class RecordingRefused(RuntimeError):
+    """EC-Cam: la cámara contestó la reproducción con un error_code."""
+
+
 def error_code(value: object) -> int:
     if not isinstance(value, dict):
         return 0
@@ -790,6 +794,17 @@ class TapoCloud:
         }
 
     @staticmethod
+    def _recording_ack_frame(sequence: str, session_id: str) -> bytes:
+        body = b'{"type":"notification","params":{"event_type":"stream_sequence"}}'
+        return (
+            b"----client-stream-boundary--\r\n"
+            b"Content-Type: application/json\r\n"
+            + f"Content-Length: {len(body)}\r\nX-Data-Received: {sequence}\r\nX-Session-Id: {session_id}\r\n\r\n".encode("ascii")
+            + body
+            + b"\r\n"
+        )
+
+    @staticmethod
     def _recording_control_frame(payload: str) -> bytes:
         body = payload.encode("utf-8")
         return (
@@ -836,7 +851,7 @@ class TapoCloud:
     @classmethod
     def _recording_read_part(
         cls, sock: socket.socket, buffer: bytearray
-    ) -> tuple[str, bytes]:
+    ) -> tuple[str, bytes, dict]:
         while True:
             line = cls._recording_read_line(sock, buffer)
             if b"--device-stream-boundary--" in line:
@@ -855,7 +870,7 @@ class TapoCloud:
             buffer.extend(chunk)
         payload = bytes(buffer[:length])
         del buffer[:length]
-        return headers.get("content-type", ""), payload
+        return headers.get("content-type", ""), payload, headers
 
     def download_recording(
         self,
@@ -865,6 +880,27 @@ class TapoCloud:
         end: int,
         out_path: str,
         progress: Callable[[int, str], None] | None = None,
+    ) -> int:
+        """EC-Cam: probar canales [0,1] (como Topo) y, si la cámara lo rechaza,
+        solo [0] (cámaras de un canal con firmware nuevo)."""
+        try:
+            return self._download_recording_once(base_url, device, start, end, out_path, progress, "[0,1]")
+        except RecordingRefused as first:
+            print(f"EC-Cam: reproducción rechazada con canales [0,1] ({first}); se reintenta con [0]", flush=True)
+            try:
+                return self._download_recording_once(base_url, device, start, end, out_path, progress, "[0]")
+            except RecordingRefused as second:
+                raise RuntimeError(f"la cámara rechazó la reproducción: {second}") from second
+
+    def _download_recording_once(
+        self,
+        base_url: str,
+        device: dict,
+        start: int,
+        end: int,
+        out_path: str,
+        progress: Callable[[int, str], None] | None = None,
+        channels: str = "[0,1]",
     ) -> int:
         """Download one SD segment through the cloud playback relay as MPEG-TS."""
         if end <= start:
@@ -948,11 +984,12 @@ class TapoCloud:
         sequence = 1000 + (start % 20000)
         playback_request = (
             f'{{"type":"request","seq":{sequence},"params":{{"playback":'
-            f'{{"client_id":{client_id},"channels":[0,1],"scale":"1/1",'
+            f'{{"client_id":{client_id},"channels":{channels},"scale":"1/1",'
             f'"start_time":"{start}","end_time":"{end}","event_type":[1,2]}},'
             f'"method":"get"}}}}'
         )
         bytes_written = 0
+        session_id = ""
         buffer = bytearray()
         pts = _MpegTsPtsTracker()
         requested_seconds = max(end - start, 1)
@@ -985,11 +1022,18 @@ class TapoCloud:
                         deadline = time.monotonic() + max(requested_seconds + 180, 180)
                         while time.monotonic() < deadline:
                             try:
-                                content_type, payload = self._recording_read_part(sock, buffer)
+                                content_type, payload, part_headers = self._recording_read_part(sock, buffer)
                             except socket.timeout:
                                 if bytes_written:
                                     break
                                 raise
+                            session_id = part_headers.get("x-session-id") or session_id
+                            data_sequence = part_headers.get("x-data-sequence", "")
+                            if session_id and data_sequence.isdigit() and int(data_sequence) % 20 == 0:
+                                # EC-Cam: confirmar lo recibido, como la app oficial;
+                                # sin esto la cámara se detiene al llenar la ventana.
+                                with contextlib.suppress(OSError):
+                                    sock.sendall(self._recording_ack_frame(data_sequence, session_id))
                             if "video/mp2t" in content_type:
                                 output.write(payload)
                                 bytes_written += len(payload)
@@ -1011,7 +1055,11 @@ class TapoCloud:
                             elif "application/json" in content_type:
                                 text = payload.decode("latin-1", "replace")
                                 if "error_code" in text and '"error_code":0' not in text:
-                                    raise RuntimeError("camera refused the recording playback")
+                                    raise RecordingRefused(text.strip()[:200])
+                                with contextlib.suppress(ValueError, TypeError, AttributeError):
+                                    found = (json.loads(text).get("params") or {}).get("session_id")
+                                    if found is not None:
+                                        session_id = str(found)
                                 if "playback_done" in text or "playfinished" in text:
                                     break
                 finally:
@@ -1021,7 +1069,7 @@ class TapoCloud:
                     with contextlib.suppress(Exception):
                         sock.sendall(
                             self._recording_control_frame(
-                                f'{{"type":"request","seq":{sequence + 1},"params":{{"playback":{{"client_id":{client_id},"channels":[0,1]}},"method":"stop"}}}}'
+                                f'{{"type":"request","seq":{sequence + 1},"params":{{"playback":{{"client_id":{client_id},"channels":{channels}}},"method":"stop"}}}}'
                             )
                         )
         if not bytes_written:
