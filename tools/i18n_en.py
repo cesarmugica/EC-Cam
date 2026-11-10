@@ -188,6 +188,29 @@ PAIRS: list[tuple[str, str]] = [
     ("'La memoria SD está bien, pero no tiene grabaciones.' : 'No se detectó memoria SD.'", "'The SD card is fine but has no recordings.' : 'No SD card detected.'"),
     ("`Grabaciones · ${name}`", "`Recordings · ${name}`"),
     ("'Memoria SD · hora local de la cámara'", "'SD card · camera local time'"),
+    # --- 2.1.0: Probar mis cámaras ---
+    ("Prueba tus cámaras y envía un reporte de compatibilidad", "Test your cameras and send a compatibility report"),
+    ("🧪 Probar mis cámaras", "🧪 Test my cameras"),
+    (">Cerrar</button></header><div class=\"app-modal-body\"><p id=\"testStatus\"", ">Close</button></header><div class=\"app-modal-body\"><p id=\"testStatus\""),
+    ("▶ Iniciar prueba", "▶ Start test"),
+    ("🔒 El reporte solo lleva modelo, firmware, versión de EC-Cam y resultados: nunca el nombre de tus cámaras ni datos de tu cuenta Tapo. Se envía desde GitHub, así que necesitas una cuenta de GitHub. La prueba no mueve las cámaras.", "🔒 The report only includes model, firmware, EC-Cam version and results: never your camera names or Tapo account data. It is sent through GitHub, so you need a GitHub account. The test never moves the cameras."),
+    ("{ok: 'Funciona', fail: 'No funciona', untested: 'No probado', nosd: 'Sin memoria SD', noptz: 'No se mueve', running: 'Probando…', ptz: 'Disponible (no se mueve sola durante la prueba)'}", "{ok: 'Works', fail: 'Does not work', untested: 'Not tested', nosd: 'No SD card', noptz: 'No pan/tilt', running: 'Testing…', ptz: 'Available (not moved during the test)'}"),
+    ("<th>Cámara</th><th>Modelo</th><th>Firmware</th><th>En vivo</th><th>Lista SD</th><th>Reproducir</th><th>Mover</th>", "<th>Camera</th><th>Model</th><th>Firmware</th><th>Live</th><th>SD list</th><th>Playback</th><th>Pan/tilt</th>"),
+    ("aria-label=\"Probar ${esc(camera.name)}\"", "aria-label=\"Test ${esc(camera.name)}\""),
+    ("' <small>(privacidad activada)</small>'", "' <small>(privacy on)</small>'"),
+    ("'Cámara sin conexión (según Tapo)'", "'Camera offline (according to Tapo)'"),
+    ("'La cámara no envió video.'", "'The camera sent no video.'"),
+    ("'La cámara no envió video en 30 s.'", "'The camera sent no video within 30 s.'"),
+    ("'La memoria SD no tiene grabaciones.'", "'The SD card has no recordings.'"),
+    ("'No hubo un clip para probar.'", "'There was no clip to test.'"),
+    ("'Se agotó el tiempo.'", "'Timed out.'"),
+    ("<h3>Enviar reporte</h3><p class=\"meta\">Un reporte por cada combinación de modelo y firmware. Se abre GitHub con el formulario ya llenado; revísalo y dale «Create».</p>", "<h3>Send report</h3><p class=\"meta\">One report per model and firmware combination. GitHub opens with the form already filled in; review it and click “Create”.</p>"),
+    ("📤 Enviar reporte", "📤 Send report"),
+    ("'Elige al menos una cámara.'", "'Choose at least one camera.'"),
+    ("`Probando ${position + 1} de ${picked.length}: ${camera.name}…`", "`Testing ${position + 1} of ${picked.length}: ${camera.name}…`"),
+    ("'Prueba detenida.' : 'Prueba terminada. Pasa el cursor sobre ❌ para ver el motivo.'", "'Test stopped.' : 'Test finished. Hover over ❌ to see why.'"),
+    ("'Cargando cámaras…'", "'Loading cameras…'"),
+    ("'Elige las cámaras y dale «Iniciar prueba». Tarda alrededor de un minuto por cámara; mientras tanto se pausa el video en vivo.'", "'Choose the cameras and click “Start test”. It takes about a minute per camera; live video pauses meanwhile.'"),
 ]
 
 # Mensajes que llegan del servidor en español (se traducen en el navegador).
@@ -220,8 +243,12 @@ def spanish_leftovers(html: str) -> list[str]:
     # Ignorar el diccionario de mensajes del servidor y nombres propios conocidos.
     body = re.sub(r"const SERVER_MESSAGES(?:_ES)? = \{.*?\};", "", body, flags=re.S)
     found = []
-    for match in re.finditer(r">([^<>]{2,})<|'([^'\n]{2,})'|`([^`\n]{2,})`|(?:title|aria-label)=\"([^\"]{2,})\"", body):
+    for match in re.finditer(r">([^<>\n]{2,})<|'([^'\n]{2,})'|`([^`\n]{2,})`|(?:title|aria-label)=\"([^\"]{2,})\"", body):
         text = next(group for group in match.groups() if group)
+        # Textos bilingües "es / en" (deben coincidir con la plantilla de GitHub) y
+        # nombres de campos del formulario de compatibilidad (envivo, mover, …).
+        if " / " in text or re.search(r"\b(?:envivo|lista|reproducir|mover): pick\(", text) or re.fullmatch(r"\), (?:envivo|lista|reproducir|mover): pick\(", text.strip()):
+            continue
         if SPANISH_HINT.search(text) and "español" not in text.lower():
             found.append(text.strip()[:120])
     return sorted(set(found))

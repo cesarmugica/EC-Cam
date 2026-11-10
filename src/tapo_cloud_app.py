@@ -1659,6 +1659,9 @@ class CloudAppState:
             "id": index,
             "name": device.get("alias") or device.get("deviceName") or f"Cámara {index + 1}",
             "model": device.get("deviceModel") or "<n/d>",
+            # EC-Cam: para la prueba de compatibilidad
+            "firmware": device.get("fwVer") or "",
+            "hardware": device.get("deviceHwVer") or "",
             "status": cloud_status,
             # The account list's status is not a live reachability check: the
             # official app can relay a camera that is reported as 0 here.

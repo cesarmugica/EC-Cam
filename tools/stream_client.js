@@ -68,7 +68,8 @@
         let want = [];
         // Con la ventana de Grabaciones abierta no se transmite en vivo: la
         // cámara no puede dar en vivo y grabación a la vez.
-        const recordingsOpen = !recordingsModal.classList.contains('hidden');
+        // Igual mientras corre «Probar mis cámaras».
+        const recordingsOpen = !recordingsModal.classList.contains('hidden') || !!document.querySelector('#testModal:not(.hidden)');
         if (!document.hidden && !recordingsOpen) {
           if (fs) want = entries.has(fs) ? [fs] : [];
           else {
@@ -103,6 +104,7 @@
       }
       setInterval(watchdog, 2000);
       new MutationObserver(schedule).observe(recordingsModal, {attributes: true, attributeFilter: ['class']});
+      const testModalEl = document.querySelector('#testModal'); if (testModalEl) new MutationObserver(schedule).observe(testModalEl, {attributes: true, attributeFilter: ['class']});
       document.addEventListener('visibilitychange', refresh);
       document.addEventListener('fullscreenchange', schedule); document.addEventListener('webkitfullscreenchange', schedule);
       window.addEventListener('online', refresh);

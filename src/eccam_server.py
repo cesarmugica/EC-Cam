@@ -34,7 +34,7 @@ from http.server import ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
-APP_VERSION = "2.0.1"
+APP_VERSION = "2.1.0"
 try:  # fecha del instalador, la escribe windows/build.ps1
     from eccam_build import BUILD_DATE  # type: ignore[import-not-found]
 except ImportError:

@@ -314,6 +314,25 @@ R("${job?.message || (isDownload ? 'Preparando descarga…' : 'Preparando grabac
 R("recordingsStatus.textContent = error.message || (isDownload ? 'No se pudo descargar la grabación.' : 'No se pudo preparar la grabación.');",
   "recordingsStatus.textContent = localizeServerMessage(error.message) || (isDownload ? 'No se pudo descargar la grabación.' : 'No se pudo preparar la grabación.');")
 
+# ---------- EC-Cam 2.1.0: Probar mis cámaras → Enviar reporte ----------
+R('<button id="logoutButton" class="danger hidden" type="button"', '<button id="cameraTestButton" class="secondary" type="button" title="Prueba tus cámaras y envía un reporte de compatibilidad">🧪 Probar mis cámaras</button><button id="logoutButton" class="danger hidden" type="button"')
+R('  <script>\n', '''  <section id="testModal" class="app-modal hidden" role="dialog" aria-modal="true" aria-labelledby="testTitle"><div class="app-modal-panel test-panel"><header><h2 id="testTitle">🧪 Probar mis cámaras</h2><button class="ghost" type="button" data-close-test>Cerrar</button></header><div class="app-modal-body"><p id="testStatus" class="meta" aria-live="polite"></p><div id="testTable" class="test-table"></div><div class="test-actions"><button id="testRunButton" type="button">▶ Iniciar prueba</button></div><p class="meta test-privacy">🔒 El reporte solo lleva modelo, firmware, versión de EC-Cam y resultados: nunca el nombre de tus cámaras ni datos de tu cuenta Tapo. Se envía desde GitHub, así que necesitas una cuenta de GitHub. La prueba no mueve las cámaras.</p><div id="testReports" class="test-reports"></div></div></div></section>
+  <script>\n''')
+R('    @keyframes spin', """    .test-panel { width: min(860px, 100%); }
+    .test-table { overflow-x: auto; margin: 6px 0 12px; } .test-table table { width: 100%; border-collapse: collapse; font-size: .88rem; }
+    .test-table th, .test-table td { padding: 8px 9px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: middle; } .test-table th { color: var(--muted); font-size: .78rem; font-weight: 650; }
+    .test-table .test-cell { text-align: center; font-size: 1.05rem; cursor: default; } .test-table input[type=checkbox] { width: 18px; height: 18px; margin: 0; }
+    .test-table .test-cell.running { animation: pulse 1.2s ease-in-out infinite; } @keyframes pulse { 50% { opacity: .35; } }
+    .test-actions { display: flex; gap: 10px; justify-content: flex-end; } .test-privacy { margin-top: 14px; font-size: .8rem; }
+    .test-reports h3 { margin: 18px 0 4px; font-size: 1rem; } .test-report { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border-top: 1px solid var(--border); }
+    @keyframes spin""")
+EXTRA_JS = (REPO / "tools" / "camtest.js").read_text(encoding="utf-8").rstrip("\n") + "\n"
+_marker = "    const qualitySelect = document.querySelector('#qualitySelect');"
+if s.count(_marker) != 1:
+    missing.append(("qualitySelect marker", s.count(_marker)))
+else:
+    s = s.replace(_marker, EXTRA_JS + _marker, 1)
+
 if missing:
     print("NO ENCONTRADOS:"); [print(" ", m) for m in missing]; sys.exit(1)
 (base / "index.html").write_text(s, encoding="utf-8")

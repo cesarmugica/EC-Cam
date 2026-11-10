@@ -164,6 +164,13 @@
       .tile-name { font-size: .82rem; }
     }
     @media (max-width: 720px) { .toolbar-actions { flex-wrap: wrap; } .toolbar-actions .quality-select { flex: 1 1 100%; } .toolbar-actions button { min-width: 0; } }
+    .test-panel { width: min(860px, 100%); }
+    .test-table { overflow-x: auto; margin: 6px 0 12px; } .test-table table { width: 100%; border-collapse: collapse; font-size: .88rem; }
+    .test-table th, .test-table td { padding: 8px 9px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: middle; } .test-table th { color: var(--muted); font-size: .78rem; font-weight: 650; }
+    .test-table .test-cell { text-align: center; font-size: 1.05rem; cursor: default; } .test-table input[type=checkbox] { width: 18px; height: 18px; margin: 0; }
+    .test-table .test-cell.running { animation: pulse 1.2s ease-in-out infinite; } @keyframes pulse { 50% { opacity: .35; } }
+    .test-actions { display: flex; gap: 10px; justify-content: flex-end; } .test-privacy { margin-top: 14px; font-size: .8rem; }
+    .test-reports h3 { margin: 18px 0 4px; font-size: 1rem; } .test-report { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border-top: 1px solid var(--border); }
     @keyframes spin { to { transform: rotate(360deg); } }
     @media (max-width: 720px) { .app-header { align-items: flex-start; } #account { align-items: flex-end; flex-direction: column; gap: 7px; } .toolbar { align-items: flex-start; flex-direction: column; } .toolbar-actions { width: 100%; } .toolbar-actions button { flex: 1; } .timeline-segment-item { grid-template-columns: 1fr auto; } .timeline-segment-item .segment-kind { grid-column: 1 / -1; grid-row: 2; } .recording-selection { align-items: stretch; flex-direction: column; } .recording-actions { justify-content: stretch; } .recording-actions button { flex: 1; } }
     @media (max-width: 480px) { .brand-subtitle { display: none; } .brand-icon { width: 40px; height: 40px; border-radius: 12px; } .header-actions button { width: 38px; overflow: hidden; padding: 8px 0; font-size: 0; } .header-actions button::first-letter { font-size: 1rem; } .card-body { padding: 14px; } }
@@ -180,9 +187,10 @@
     </div>
     <div id="mfaView" class="hidden"><h2>Verificación en dos pasos</h2><p>Completa la verificación que pide tu cuenta Tapo.</p><label for="mfaType">Método de verificación</label><select id="mfaType"></select><button id="requestMfaButton" type="button">Enviar código</button><label for="mfaCode">Código de verificación</label><input id="mfaCode" inputmode="numeric" autocomplete="one-time-code"><button id="verifyMfaButton" type="button" disabled>Verificar código</button><button id="backLoginButton" class="secondary" type="button">Volver</button><div id="mfaInfo" class="login-info" aria-live="polite"></div><div id="mfaError" class="login-error" aria-live="polite"></div></div>
   </div></section>
-  <main id="appView" class="hidden"><div class="toolbar"><div><h2>Tus cámaras</h2><p id="cameraSummary">Cargando cámaras…</p></div><div class="toolbar-actions"><select id="qualitySelect" class="quality-select" title="Calidad del video" aria-label="Calidad del video"><option value="hd">Calidad HD</option><option value="sd">Calidad ligera (SD)</option></select><button id="refreshMainButton" class="secondary" type="button">↻ Actualizar</button><button id="logoutButton" class="danger hidden" type="button" title="Cerrar la sesión de Tapo en esta PC">Cerrar sesión de Tapo</button></div></div><div class="stage"><section id="viewer" class="viewer"><div class="viewer-bar"><button id="prevCam" class="nav-btn" type="button" aria-label="Cámara anterior" title="Cámara anterior (←)">◀</button><div class="viewer-title"><strong id="viewerName"></strong><span id="viewerCount"></span></div><button id="nextCam" class="nav-btn" type="button" aria-label="Cámara siguiente" title="Cámara siguiente (→)">▶</button></div><div id="viewerCard"></div></section><aside class="tiles-wrap"><h3 class="tiles-title">Todas las cámaras</h3><div id="grid" class="tiles" aria-live="polite"></div></aside></div></main>
+  <main id="appView" class="hidden"><div class="toolbar"><div><h2>Tus cámaras</h2><p id="cameraSummary">Cargando cámaras…</p></div><div class="toolbar-actions"><select id="qualitySelect" class="quality-select" title="Calidad del video" aria-label="Calidad del video"><option value="hd">Calidad HD</option><option value="sd">Calidad ligera (SD)</option></select><button id="refreshMainButton" class="secondary" type="button">↻ Actualizar</button><button id="cameraTestButton" class="secondary" type="button" title="Prueba tus cámaras y envía un reporte de compatibilidad">🧪 Probar mis cámaras</button><button id="logoutButton" class="danger hidden" type="button" title="Cerrar la sesión de Tapo en esta PC">Cerrar sesión de Tapo</button></div></div><div class="stage"><section id="viewer" class="viewer"><div class="viewer-bar"><button id="prevCam" class="nav-btn" type="button" aria-label="Cámara anterior" title="Cámara anterior (←)">◀</button><div class="viewer-title"><strong id="viewerName"></strong><span id="viewerCount"></span></div><button id="nextCam" class="nav-btn" type="button" aria-label="Cámara siguiente" title="Cámara siguiente (→)">▶</button></div><div id="viewerCard"></div></section><aside class="tiles-wrap"><h3 class="tiles-title">Todas las cámaras</h3><div id="grid" class="tiles" aria-live="polite"></div></aside></div></main>
   <footer class="app-footer">EC-Cam · motor de video basado en <a href="https://github.com/filirnd/topo" target="_blank" rel="noopener">Topo</a> (licencia MIT)</footer>
   <section id="recordingsModal" class="recordings-modal hidden" role="dialog" aria-modal="true" aria-labelledby="recordingsTitle"><div class="recordings-panel"><header class="recordings-header"><div class="recordings-heading"><h2 id="recordingsTitle">Grabaciones</h2><p id="recordingsSubtitle">Línea de tiempo de la memoria SD</p></div><button id="closeRecordingsButton" class="ghost" type="button">Cerrar</button></header><div class="recordings-body"><div class="recordings-toolbar"><div><h3>Días disponibles</h3><p>Las horas están en la zona horaria de la cámara.</p></div><button id="refreshRecordingsButton" class="secondary" type="button">↻ Actualizar</button></div><div id="recordingsStatus" class="recordings-status" aria-live="polite">Cargando grabaciones…</div><div id="recordingDays" class="recording-days"></div><div id="timelineCard" class="timeline-card hidden"><div id="timelineLoading" class="timeline-loading hidden" aria-live="polite">Cargando línea de tiempo…</div><div class="timeline-topline"><strong id="timelineDate">Línea de tiempo</strong><span id="timelineSummary"></span></div><div class="timeline-hours"><span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span><span>24:00</span></div><div id="timelineTrack" class="timeline-track"></div><div class="timeline-legend"><span>Movimiento / evento</span><span class="continuous">Grabación continua</span></div><div class="timeline-list-heading"><strong>Segmentos grabados</strong><span>Usa la lista cuando los segmentos están muy juntos.</span></div><div id="timelineSegmentList" class="timeline-segment-list"></div><div id="recordingSelection" class="recording-selection">Elige un segmento para ver su hora y duración.</div><div id="recordingPlayerWrap" class="recording-player hidden"><video id="recordingPlayer" controls preload="metadata"></video></div></div></div></div></section>
+  <section id="testModal" class="app-modal hidden" role="dialog" aria-modal="true" aria-labelledby="testTitle"><div class="app-modal-panel test-panel"><header><h2 id="testTitle">🧪 Probar mis cámaras</h2><button class="ghost" type="button" data-close-test>Cerrar</button></header><div class="app-modal-body"><p id="testStatus" class="meta" aria-live="polite"></p><div id="testTable" class="test-table"></div><div class="test-actions"><button id="testRunButton" type="button">▶ Iniciar prueba</button></div><p class="meta test-privacy">🔒 El reporte solo lleva modelo, firmware, versión de EC-Cam y resultados: nunca el nombre de tus cámaras ni datos de tu cuenta Tapo. Se envía desde GitHub, así que necesitas una cuenta de GitHub. La prueba no mueve las cámaras.</p><div id="testReports" class="test-reports"></div></div></div></section>
   <script>
     const grid = document.querySelector('#grid'), state = document.querySelector('#state'), loginView = document.querySelector('#loginView'), appView = document.querySelector('#appView'), credentialsView = document.querySelector('#credentialsView'), mfaView = document.querySelector('#mfaView'), loginForm = document.querySelector('#loginForm'), loginButton = document.querySelector('#loginButton'), loginError = document.querySelector('#loginError'), mfaType = document.querySelector('#mfaType'), mfaCode = document.querySelector('#mfaCode'), requestMfaButton = document.querySelector('#requestMfaButton'), verifyMfaButton = document.querySelector('#verifyMfaButton'), backLoginButton = document.querySelector('#backLoginButton'), mfaInfo = document.querySelector('#mfaInfo'), mfaError = document.querySelector('#mfaError'), logoutButton = document.querySelector('#logoutButton'), refreshButton = document.querySelector('#refreshButton'), refreshMainButton = document.querySelector('#refreshMainButton'), cameraSummary = document.querySelector('#cameraSummary'), recordingsModal = document.querySelector('#recordingsModal'), closeRecordingsButton = document.querySelector('#closeRecordingsButton'), refreshRecordingsButton = document.querySelector('#refreshRecordingsButton'), recordingsTitle = document.querySelector('#recordingsTitle'), recordingsSubtitle = document.querySelector('#recordingsSubtitle'), recordingsStatus = document.querySelector('#recordingsStatus'), recordingDays = document.querySelector('#recordingDays'), timelineCard = document.querySelector('#timelineCard'), timelineLoading = document.querySelector('#timelineLoading'), timelineDate = document.querySelector('#timelineDate'), timelineSummary = document.querySelector('#timelineSummary'), timelineTrack = document.querySelector('#timelineTrack'), timelineSegmentList = document.querySelector('#timelineSegmentList'), recordingSelection = document.querySelector('#recordingSelection'), recordingPlayerWrap = document.querySelector('#recordingPlayerWrap'), recordingPlayer = document.querySelector('#recordingPlayer');
     let appUser = {user: 'local', role: 'admin'}; const isAdmin = () => true;
@@ -270,7 +278,8 @@
         let want = [];
         // Con la ventana de Grabaciones abierta no se transmite en vivo: la
         // cámara no puede dar en vivo y grabación a la vez.
-        const recordingsOpen = !recordingsModal.classList.contains('hidden');
+        // Igual mientras corre «Probar mis cámaras».
+        const recordingsOpen = !recordingsModal.classList.contains('hidden') || !!document.querySelector('#testModal:not(.hidden)');
         if (!document.hidden && !recordingsOpen) {
           if (fs) want = entries.has(fs) ? [fs] : [];
           else {
@@ -305,6 +314,7 @@
       }
       setInterval(watchdog, 2000);
       new MutationObserver(schedule).observe(recordingsModal, {attributes: true, attributeFilter: ['class']});
+      const testModalEl = document.querySelector('#testModal'); if (testModalEl) new MutationObserver(schedule).observe(testModalEl, {attributes: true, attributeFilter: ['class']});
       document.addEventListener('visibilitychange', refresh);
       document.addEventListener('fullscreenchange', schedule); document.addEventListener('webkitfullscreenchange', schedule);
       window.addEventListener('online', refresh);
@@ -642,6 +652,150 @@
     }
     function formatBuildDate(value) { const m = String(value).match(/^(\d{4})-(\d{2})-(\d{2})(?: (\d{2}:\d{2}))?/); if (!m) return value; const months = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic']; return `${Number(m[3])} ${months[Number(m[2]) - 1]} ${m[1]}${m[4] ? ', ' + m[4] : ''}`; }
     async function checkTapo() { try { const data = await api('/api/session'); if (data.authenticated) { showApp(); await load(); } else if (data.mfa_pending) showMfa(data.mfa_types); else showLogin(); } catch (_) { showLogin(); } }
+    // ---------- EC-Cam: Probar mis cámaras → Enviar reporte ----------
+    // Prueba cada cámara (en vivo, lista de grabaciones, reproducir) y arma un
+    // reporte de compatibilidad para GitHub con solo modelo, firmware, versión
+    // y resultados: nunca el nombre de la cámara ni datos de la cuenta.
+    const REPORT_URL = 'https://github.com/cesarmugica/EC-Cam/issues/new';
+    const REPORT_OPTIONS = {ok: '✅ Funciona / Works', fail: '❌ No funciona / Doesn\u0027t work', untested: '⚪ No probado / Not tested', nosd: '— Sin memoria SD / No SD card', noptz: '— La cámara no se mueve / Camera has no pan/tilt'};
+    const REPORT_NOTE = 'Prueba automática / Automatic test: EC-Cam 🧪';
+    const TEST_ICONS = {ok: '✅', fail: '❌', untested: '⚪', nosd: '—', noptz: '—', running: '⏳', ptz: '✥'};
+    const testModal = document.querySelector('#testModal'), testTable = document.querySelector('#testTable'), testRunButton = document.querySelector('#testRunButton'), testReports = document.querySelector('#testReports'), testStatus = document.querySelector('#testStatus');
+    const testState = {cams: [], results: {}, running: false, cancelled: false, controller: null, jobId: ''};
+    function testLabel(kind) { return {ok: 'Funciona', fail: 'No funciona', untested: 'No probado', nosd: 'Sin memoria SD', noptz: 'No se mueve', running: 'Probando…', ptz: 'Disponible (no se mueve sola durante la prueba)'}[kind] || ''; }
+    function testCell(id, key) {
+      const result = (testState.results[id] || {})[key];
+      if (!result) return '<td class="test-cell">·</td>';
+      return `<td class="test-cell ${result.kind}" title="${esc(testLabel(result.kind) + (result.error ? ' · ' + result.error : ''))}">${TEST_ICONS[result.kind] || '·'}</td>`;
+    }
+    function renderTestTable() {
+      testTable.innerHTML = `<table><thead><tr><th></th><th>Cámara</th><th>Modelo</th><th>Firmware</th><th>En vivo</th><th>Lista SD</th><th>Reproducir</th><th>Mover</th></tr></thead><tbody>${testState.cams.map(camera => `<tr><td><input type="checkbox" class="test-pick" data-id="${esc(camera.id)}" ${camera.privacy === true ? '' : 'checked'} ${testState.running ? 'disabled' : ''} aria-label="Probar ${esc(camera.name)}"></td><td>${esc(camera.name)}${camera.privacy === true ? ' <small>(privacidad activada)</small>' : ''}</td><td>${esc(camera.model)}</td><td><small>${esc(camera.firmware || '?')}</small></td>${testCell(camera.id, 'live')}${testCell(camera.id, 'list')}${testCell(camera.id, 'play')}${testCell(camera.id, 'move')}</tr>`).join('')}</tbody></table>`;
+    }
+    function setResult(id, key, kind, error = '') { testState.results[id] = {...(testState.results[id] || {}), [key]: {kind, error}}; renderTestTable(); }
+    const OFFLINE_TEXT = 'Cámara sin conexión (según Tapo)';
+    const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
+    async function streamReason(id) {
+      try { const status = await api(`/api/app/stream-status?cam=${encodeURIComponent(id)}&q=SD`); return status.kind === 'offline' ? OFFLINE_TEXT : (status.error || ''); } catch (_) { return ''; }
+    }
+    // Una cámara apagada o sin internet no dice nada de la compatibilidad: queda «No probado».
+    function liveFailure(reason) { return reason === OFFLINE_TEXT ? ['untested', reason] : ['fail', reason]; }
+    async function testLive(id) {
+      const controller = new AbortController(); testState.controller = controller;
+      const timer = setTimeout(() => controller.abort(), 30000);
+      let received = 0;
+      try {
+        const response = await fetch(`/stream/${encodeURIComponent(id)}.mp4?q=sd&t=${Date.now()}`, {signal: controller.signal, credentials: 'same-origin'});
+        if (!response.ok) return liveFailure(localizeServerMessage((await response.json().catch(() => ({}))).error) || await streamReason(id));
+        const reader = response.body.getReader();
+        while (received < 20000) { const {done, value} = await reader.read(); if (done) break; received += value.length; }
+        controller.abort();
+        return received >= 20000 ? ['ok', ''] : liveFailure(await streamReason(id) || 'La cámara no envió video.');
+      } catch (_) {
+        return testState.cancelled ? ['untested', ''] : liveFailure(await streamReason(id) || 'La cámara no envió video en 30 s.');
+      } finally { clearTimeout(timer); testState.controller = null; }
+    }
+    async function testRecordings(id) {
+      let dates;
+      try { dates = await api(`/api/cameras/${encodeURIComponent(id)}/recordings/dates?days=7`); } catch (error) { return {list: ['fail', error.message], play: ['untested', '']}; }
+      if (!dates.sd_available) return {list: ['nosd', ''], play: ['nosd', '']};
+      if (!dates.dates?.length) return {list: ['untested', 'La memoria SD no tiene grabaciones.'], play: ['untested', '']};
+      let clips = [];
+      for (const date of [...dates.dates].reverse().slice(0, 3)) {
+        try { const day = await api(`/api/cameras/${encodeURIComponent(id)}/recordings?date=${encodeURIComponent(date)}`); clips = (day.clips || []).filter(clip => Number(clip.end) - Number(clip.start) >= 6); } catch (error) { return {list: ['fail', error.message], play: ['untested', '']}; }
+        if (clips.length) break;
+      }
+      if (!clips.length) return {list: ['ok', ''], play: ['untested', 'No hubo un clip para probar.']};
+      if (testState.cancelled) return {list: ['ok', ''], play: ['untested', '']};
+      const clip = clips[Math.max(0, clips.length - 2)];
+      let jobId = '';
+      try {
+        const created = await api(`/api/cameras/${encodeURIComponent(id)}/recordings/play`, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({start: Number(clip.start), end: Number(clip.start) + 8})});
+        jobId = testState.jobId = created.job_id;
+        for (let i = 0; i < 120 && !testState.cancelled; i++) {
+          await pause(500);
+          const job = await api(`/api/recording-jobs/${encodeURIComponent(jobId)}`);
+          if (job.status === 'error') return {list: ['ok', ''], play: ['fail', localizeServerMessage(job.error) || '']};
+          if (job.status === 'ready' || Number(job.progress) >= 26) return {list: ['ok', ''], play: ['ok', '']};
+        }
+        return {list: ['ok', ''], play: [testState.cancelled ? 'untested' : 'fail', testState.cancelled ? '' : 'Se agotó el tiempo.']};
+      } catch (error) {
+        return {list: ['ok', ''], play: ['fail', error.message]};
+      } finally {
+        if (jobId) fetch(`/api/recording-jobs/${encodeURIComponent(jobId)}/cancel`, {method: 'POST', credentials: 'same-origin', headers: {'Content-Type': 'application/json'}, body: '{}'}).catch(() => {});
+        testState.jobId = '';
+      }
+    }
+    function reportUrl(camera, result) {
+      const pick = key => REPORT_OPTIONS[(result[key] || {}).kind] || REPORT_OPTIONS.untested;
+      const errors = ['live', 'list', 'play'].filter(key => (result[key] || {}).kind === 'fail').map(key => result[key].error).filter(Boolean).join('\n');
+      const version = (document.querySelector('.brand-subtitle')?.textContent.match(/\d+\.\d+\.\d+/) || [''])[0];
+      const params = new URLSearchParams({template: 'compatibilidad.yml', title: ('[Compatibilidad] ' + (camera.model || '') + ' ' + (camera.firmware || '')).trim(), modelo: camera.model || '', hardware: camera.hardware || '', firmware: camera.firmware || '', version, envivo: pick('live'), lista: pick('list'), reproducir: pick('play'), mover: pick('move'), error: errors, notas: REPORT_NOTE});
+      return REPORT_URL + '?' + params.toString();
+    }
+    // Varias cámaras del mismo modelo y firmware: un solo reporte con el mejor
+    // resultado de cada prueba (si una funciona, el modelo funciona) y sus errores.
+    const RESULT_RANK = {ok: 4, fail: 3, nosd: 2, noptz: 2, untested: 1};
+    function mergeResults(a, b) {
+      const merged = {};
+      for (const key of ['live', 'list', 'play', 'move']) {
+        const x = a[key] || {kind: 'untested', error: ''}, y = b[key] || {kind: 'untested', error: ''};
+        const best = (RESULT_RANK[y.kind] || 0) > (RESULT_RANK[x.kind] || 0) ? y : x;
+        const errors = best.kind === 'ok' ? '' : [...new Set([x.error, y.error].filter(Boolean))].join(' · ');
+        merged[key] = {kind: best.kind, error: errors};
+      }
+      return merged;
+    }
+    function renderReports() {
+      const groups = new Map();
+      for (const camera of testState.cams) {
+        const result = testState.results[camera.id];
+        if (!result || !result.live) continue;
+        const key = `${camera.model}|${camera.firmware}|${camera.hardware}`;
+        const group = groups.get(key);
+        groups.set(key, group ? {camera: group.camera, result: mergeResults(group.result, result)} : {camera, result});
+      }
+      if (!groups.size) { testReports.innerHTML = ''; return; }
+      testReports.innerHTML = `<h3>Enviar reporte</h3><p class="meta">Un reporte por cada combinación de modelo y firmware. Se abre GitHub con el formulario ya llenado; revísalo y dale «Create».</p>${[...groups.values()].map(({camera, result}, index) => `<div class="test-report"><span><strong>${esc(camera.model)}</strong> <small>${esc(camera.firmware)}</small></span><button type="button" class="secondary" data-report="${index}">📤 Enviar reporte</button></div>`).join('')}`;
+      const list = [...groups.values()];
+      testReports.querySelectorAll('[data-report]').forEach(button => button.addEventListener('click', () => { const {camera, result} = list[Number(button.dataset.report)]; window.open(reportUrl(camera, result), '_blank', 'noopener'); }));
+    }
+    async function runCameraTest() {
+      const picked = [...testTable.querySelectorAll('.test-pick:checked')].map(input => input.dataset.id);
+      if (!picked.length) { testStatus.textContent = 'Elige al menos una cámara.'; return; }
+      testState.running = true; testState.cancelled = false; testRunButton.disabled = true; testReports.innerHTML = '';
+      for (const id of picked) testState.results[id] = {};
+      for (const [position, id] of picked.entries()) {
+        if (testState.cancelled) break;
+        const camera = testState.cams.find(item => String(item.id) === String(id));
+        testStatus.textContent = `Probando ${position + 1} de ${picked.length}: ${camera.name}…`;
+        setResult(id, 'move', camera.ptz ? 'ptz' : 'noptz');
+        setResult(id, 'live', 'running');
+        const [liveKind, liveError] = await testLive(id);
+        setResult(id, 'live', liveKind, liveError);
+        if (testState.cancelled) break;
+        setResult(id, 'list', 'running'); setResult(id, 'play', 'running');
+        const recordings = await testRecordings(id);
+        setResult(id, 'list', ...recordings.list); setResult(id, 'play', ...recordings.play);
+      }
+      for (const result of Object.values(testState.results)) if (result.move && result.move.kind === 'ptz') result.move = {kind: 'untested', error: ''};
+      testState.running = false; testRunButton.disabled = false;
+      testStatus.textContent = testState.cancelled ? 'Prueba detenida.' : 'Prueba terminada. Pasa el cursor sobre ❌ para ver el motivo.';
+      renderTestTable(); renderReports();
+    }
+    async function openCameraTest() {
+      testModal.classList.remove('hidden'); testStatus.textContent = 'Cargando cámaras…'; testReports.innerHTML = '';
+      try { const data = await api('/api/cameras'); testState.cams = data.cameras || []; testStatus.textContent = 'Elige las cámaras y dale «Iniciar prueba». Tarda alrededor de un minuto por cámara; mientras tanto se pausa el video en vivo.'; }
+      catch (error) { testState.cams = []; testStatus.textContent = error.message; }
+      renderTestTable(); renderReports();
+    }
+    function closeCameraTest() {
+      if (testState.running) { testState.cancelled = true; testState.controller?.abort(); }
+      testModal.classList.add('hidden');
+    }
+    document.querySelector('#cameraTestButton')?.addEventListener('click', openCameraTest);
+    testRunButton.addEventListener('click', runCameraTest);
+    testModal.querySelector('[data-close-test]').addEventListener('click', closeCameraTest);
+    testModal.addEventListener('click', event => { if (event.target === testModal) closeCameraTest(); });
     const qualitySelect = document.querySelector('#qualitySelect'); qualitySelect.value = liveVideo.quality(); qualitySelect.addEventListener('change', () => liveVideo.setGridQuality(qualitySelect.value));
     (async function init() {
       try {
