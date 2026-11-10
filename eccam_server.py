@@ -35,7 +35,7 @@ from http.server import ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlsplit
 
-APP_VERSION = "1.0.2"
+APP_VERSION = "1.0.3"
 ROOT = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent))
 EXE_DIR = Path(sys.executable).resolve().parent if getattr(sys, "frozen", False) else ROOT
 WEB_ROOT = ROOT / "web"
@@ -317,6 +317,24 @@ class EcCamHandler(engine.Handler):
                     items = list(state.workers.items())
                 workers = [{"key": str(key), **worker.diagnostics()} for key, worker in items]
             self.send_json({"ok": True, "version": APP_VERSION, "ffmpeg": os.environ.get("TOPO_FFMPEG"), "workers": workers})
+            return
+        if path == "/api/app/relaytest":
+            if user["role"] != "admin":
+                self._deny(403, "Solo un administrador.")
+                return
+            state = self.context.current_state()
+            if state is None:
+                self._deny(409, "Conecta la cuenta Tapo primero.")
+                return
+            import eccam_relaytest
+            from urllib.parse import parse_qs
+            try:
+                index = int(parse_qs(urlsplit(self.path).query).get("cam", ["0"])[0])
+                state.devices[index]
+            except (ValueError, IndexError):
+                self._deny(400, "Cámara inválida.")
+                return
+            self.send_json({"ok": True, **eccam_relaytest.run(state, index)})
             return
         if path.endswith("/native-player"):
             # El reproductor nativo abriría ventanas en la PC servidor.
