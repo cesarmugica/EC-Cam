@@ -10,7 +10,7 @@ Cada versión tiene su instalador en [Releases](https://github.com/cesarmugica/E
 ## 2.0.1 — Idiomas y orden
 - **Español / English:** selector de idioma en la app (🌐), que se recuerda. El instalador también es bilingüe, y el idioma que elijas al instalar es el idioma inicial de la app.
 - Repositorio ordenado por carpetas: `src/`, `docs/`, `tools/`, `windows/`.
-- Este historial y el reporte para el autor de Topo (`docs/reporte-topo/`).
+- Este historial y el reporte para el autor de Topo (`docs/HALLAZGOS-TOPO.md`).
 
 ## 1.2.x — Escritorio
 - **1.2.2:** EC-Cam abre en **su propia ventana** (Edge o Chrome en modo aplicación, sin barra de direcciones).

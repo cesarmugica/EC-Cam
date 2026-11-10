@@ -1,8 +1,8 @@
-<!--
-  Texto listo para pegar como "New issue" en https://github.com/filirnd/topo/issues
-  Título sugerido:
-  Findings from a fork: newer C200 firmware needs the preview request, plus a few streaming/playback fixes
--->
+# Findings shared with Topo
+
+Sent to the author of [Topo](https://github.com/filirnd/topo) as an issue in November 2026. Kept here as a record of the problems found and how EC-Cam fixed them.
+
+---
 
 Hi! First of all, thank you for Topo. The cloud login, request signing and relay work you did saved us a lot of time.
 

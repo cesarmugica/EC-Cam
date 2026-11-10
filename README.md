@@ -8,7 +8,7 @@ Ver tus cámaras **Tapo** en la PC, sin emulador de Android y sin la app del cel
 |---|---|
 | ⬇️ **Descargar** | [Última versión](https://github.com/cesarmugica/EC-Cam/releases/latest) · [Historial de versiones](CHANGELOG.md) |
 | 📷 **Cámaras** | [Modelos y firmwares compatibles](#compatibilidad) |
-| 📖 **Documentación** | [Cómo se conecta con la nube de Tapo](docs/PROTOCOLO-TAPO.md) · [Reporte para el autor de Topo](docs/reporte-topo/) |
+| 📖 **Documentación** | [Cómo se conecta con la nube de Tapo](docs/PROTOCOLO-TAPO.md) · [Hallazgos compartidos con Topo](docs/HALLAZGOS-TOPO.md) |
 | 💬 **Reportar** | [¿Funciona con tu cámara?](https://github.com/cesarmugica/EC-Cam/issues/new?template=compatibilidad.yml) · [Reportar un problema](https://github.com/cesarmugica/EC-Cam/issues/new?template=problema.yml) |
 
 - Video en vivo, audio, mover la cámara (pan/tilt), modo privacidad y pantalla completa.
@@ -97,7 +97,7 @@ EC-Cam/
 ├── LICENSE-TOPO.txt          licencia MIT de Topo
 ├── docs/
 │   ├── PROTOCOLO-TAPO.md     cómo se conecta con la nube de Tapo y qué hacer si cambia
-│   └── reporte-topo/         hallazgos para el autor de Topo (issue en inglés)
+│   └── HALLAZGOS-TOPO.md     hallazgos que se compartieron con el autor de Topo (en inglés)
 ├── src/                      el programa
 │   ├── eccam_server.py       servidor local (rutas, idioma, seguridad, diagnóstico)
 │   ├── tapo_cloud_app.py     motor de Topo + mejoras: video, audio, PTZ, grabaciones
@@ -150,6 +150,6 @@ See your **Tapo** cameras on your Windows PC, without an Android emulator or the
 
 Have another model or firmware? In EC-Cam click **🧪 Test my cameras**, then **📤 Send report**: it opens the GitHub compatibility report already filled in (model, firmware and results only, nothing from your account). You can also [fill it in by hand](https://github.com/cesarmugica/EC-Cam/issues/new?template=compatibilidad.yml). Other cloud-connected Tapo cameras (C100, C110, C210, C220, C310, C320WS, C510W, C520WS…) will **probably work** since they use the same cloud service, but they are **not tested**. Battery cameras (C400/C420/C425) and Hub-connected cameras are not tested and probably won't work.
 
-**Docs:** how the Tapo cloud connection works and what to check if TP-Link changes it: [docs/PROTOCOLO-TAPO.md](docs/PROTOCOLO-TAPO.md) (Spanish). Findings shared with the Topo author: [docs/reporte-topo/](docs/reporte-topo/) (English).
+**Docs:** how the Tapo cloud connection works and what to check if TP-Link changes it: [docs/PROTOCOLO-TAPO.md](docs/PROTOCOLO-TAPO.md) (Spanish). Findings shared with the Topo author: [docs/HALLAZGOS-TOPO.md](docs/HALLAZGOS-TOPO.md).
 
 Video engine based on [Topo](https://github.com/filirnd/topo) (MIT). Preview protocol for newer firmware documented by [tapo-view](https://github.com/tothi/tapo-view).
