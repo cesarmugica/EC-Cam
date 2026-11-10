@@ -4,3 +4,4 @@ windows/dist/
 windows/out/
 windows/.build/
 windows/ffmpeg.exe
+eccam_build.py

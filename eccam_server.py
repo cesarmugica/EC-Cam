@@ -35,7 +35,11 @@ from http.server import ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlsplit
 
-APP_VERSION = "1.0.6"
+APP_VERSION = "1.0.7"
+try:  # fecha del instalador, la escribe windows/build.ps1
+    from eccam_build import BUILD_DATE  # type: ignore[import-not-found]
+except ImportError:
+    BUILD_DATE = ""
 ROOT = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent))
 EXE_DIR = Path(sys.executable).resolve().parent if getattr(sys, "frozen", False) else ROOT
 WEB_ROOT = ROOT / "web"
@@ -264,6 +268,7 @@ class EcCamHandler(engine.Handler):
             "needs_setup": not has_users,
             "setup_allowed": (not has_users) and self.is_direct_local(),
             "version": APP_VERSION,
+            "build_date": BUILD_DATE,
         }
 
     def _deny(self, status: int, message: str) -> None:
@@ -545,7 +550,7 @@ def main() -> int:
     parser.add_argument("--reset-password", metavar="NOMBRE")
     parser.add_argument("--delete-user", metavar="NOMBRE")
     parser.add_argument("--list-users", action="store_true")
-    parser.add_argument("--version", action="version", version=f"EC-Cam {APP_VERSION}")
+    parser.add_argument("--version", action="version", version=f"EC-Cam {APP_VERSION} {BUILD_DATE}".strip())
     args = parser.parse_args()
 
     auth = AuthStore()
@@ -580,7 +585,7 @@ def main() -> int:
         return 1
     handler_class.context = context
 
-    print(f"EC-Cam {APP_VERSION} disponible en http://{host}:{port}", flush=True)
+    print(f"EC-Cam {APP_VERSION} ({BUILD_DATE or 'desarrollo'}) disponible en http://{host}:{port}", flush=True)
     print(f"Datos y configuración: {HOME}", flush=True)
     if not auth.has_users():
         print(f"Primera vez: abre {local_url}setup en esta PC para crear el administrador.", flush=True)

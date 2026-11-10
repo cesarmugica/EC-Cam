@@ -603,6 +603,7 @@
     document.addEventListener('keydown', event => { if (event.key === 'Escape') { if (!recordingsModal.classList.contains('hidden')) { closeRecordings(); return; } const active = fullscreenElement(); if (active?.classList.contains('commands-open')) toggleCommands(active, active.querySelector('.commands-handle'), false); } });
     // ---------- EC-Cam: sesión propia, usuarios y cuenta ----------
     const usersModal = document.querySelector('#usersModal'), accountModal = document.querySelector('#accountModal'), userList = document.querySelector('#userList'), usersMsg = document.querySelector('#usersMsg'), accountMsg = document.querySelector('#accountMsg');
+    function formatBuildDate(value) { const m = String(value).match(/^(\d{4})-(\d{2})-(\d{2})(?: (\d{2}:\d{2}))?/); if (!m) return value; const months = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic']; return `${Number(m[3])} ${months[Number(m[2]) - 1]} ${m[1]}${m[4] ? ', ' + m[4] : ''}`; }
     function roleName(role) { return role === 'admin' ? 'Administrador' : 'Visor'; }
     function openModal(modal) { modal.classList.remove('hidden'); modal.querySelector('input, button')?.focus(); }
     function closeModal(modal) { modal.classList.add('hidden'); }
@@ -639,7 +640,7 @@
       catch (error) { setMsg(accountMsg, error.message, 'bad'); } finally { submit.disabled = false; }
     });
     document.querySelector('#usersButton').addEventListener('click', () => { openModal(usersModal); loadUsers(); });
-    document.querySelector('#accountButton').addEventListener('click', () => { document.querySelector('#accountInfo').textContent = `Usuario: ${appUser.user} · ${roleName(appUser.role)}`; document.querySelector('#accountUserHidden').value = appUser.user; setMsg(accountMsg, ''); openModal(accountModal); });
+    document.querySelector('#accountButton').addEventListener('click', () => { document.querySelector('#accountInfo').textContent = `Usuario: ${appUser.user} · ${roleName(appUser.role)} · ${document.querySelector('.brand-subtitle')?.textContent || ''}`; document.querySelector('#accountUserHidden').value = appUser.user; setMsg(accountMsg, ''); openModal(accountModal); });
     document.querySelector('#appLogoutButton').addEventListener('click', async () => { try { await api('/api/app/logout', {method: 'POST'}); } catch (_) {} location.replace('/login'); });
     async function checkTapo() { try { const data = await api('/api/session'); if (data.authenticated) { showApp(); await load(); } else if (data.mfa_pending && isAdmin()) showMfa(data.mfa_types); else showLogin(); } catch (_) { showLogin(); } }
     document.querySelector('#viewerRetryButton').addEventListener('click', checkTapo);
@@ -649,7 +650,9 @@
         const session = await api('/api/app/session');
         if (!session.app_authenticated) { location.replace(session.needs_setup ? '/setup' : '/login'); return; }
         appUser = {user: session.user, role: session.role};
-        const footer = document.querySelector('.app-footer'); if (footer && session.version) footer.insertAdjacentText('afterbegin', `Versión ${session.version} · `);
+        const versionText = session.version ? `Versión ${session.version}${session.build_date ? ' · ' + formatBuildDate(session.build_date) : ''}` : '';
+        const footer = document.querySelector('.app-footer'); if (footer && versionText) footer.insertAdjacentText('afterbegin', `${versionText} · `);
+        const subtitle = document.querySelector('.brand-subtitle'); if (subtitle && versionText) { subtitle.textContent = versionText; subtitle.title = 'Versión instalada de EC-Cam'; }
         document.querySelector('#userChip').innerHTML = `<strong>${esc(appUser.user)}</strong> · ${roleName(appUser.role)}`;
         document.querySelector('#usersButton').classList.toggle('hidden', !isAdmin());
       } catch (_) { location.replace('/login'); return; }

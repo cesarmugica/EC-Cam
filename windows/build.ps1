@@ -56,6 +56,12 @@ if (-not (Test-Path $ffmpegCache)) {
   } finally { Remove-Item $tmp -Recurse -Force -ErrorAction SilentlyContinue }
 }
 
+# --- Fecha de publicación (hora de Ciudad de México) ---
+try { $tz = [TimeZoneInfo]::FindSystemTimeZoneById('Central Standard Time (Mexico)') } catch { $tz = [TimeZoneInfo]::Local }
+$buildDate = [TimeZoneInfo]::ConvertTimeFromUtc([DateTime]::UtcNow, $tz).ToString('yyyy-MM-dd HH:mm')
+Set-Content -Path (Join-Path $projectRoot 'eccam_build.py') -Value "BUILD_DATE = `"$buildDate`"" -Encoding ascii
+Write-Host "Fecha de publicación: $buildDate"
+
 # --- Servidor (PyInstaller, carpeta, sin consola) ---
 Write-Host 'Compilando el servidor...'
 Invoke-Checked $python ($pythonArgs + @(
