@@ -16,7 +16,19 @@ from tapo_cloud_probe import error_code, result_of
 SECRET_HEADERS = {"x-token", "cookie", "set-cookie", "authorization"}
 
 
-def _relay_from_request(client, base_url: str, device: dict, pre: int, resolution: str, player_id: str) -> tuple[dict, dict]:
+AUDIO_PARAMS = '{"audio_config":{"encode_type":"G711ulaw","sample_rate":"16"}}'
+
+
+def _url_shape(value: str) -> str:
+    """scheme://host/path?nombres-de-parámetros (sin valores)."""
+    if not value:
+        return ""
+    parts = urlsplit(value if "://" in value else "https://" + value)
+    keys = [item.split("=", 1)[0] for item in parts.query.split("&") if item]
+    return f"{parts.scheme}://{parts.hostname}{parts.path}" + (f"?{'&'.join(keys)}" if keys else "")
+
+
+def _relay_from_request(client, base_url: str, device: dict, pre: int, resolution: str, player_id: str, custom: bool = False) -> tuple[dict, dict]:
     client.discover_cipc_url(base_url)
     param = {
         "deviceId": str(device.get("deviceId") or ""),
@@ -29,6 +41,8 @@ def _relay_from_request(client, base_url: str, device: dict, pre: int, resolutio
         "preConnection": pre,
         "resolution": resolution,
     }
+    if custom:
+        param["customParams"] = AUDIO_PARAMS
     response = client.post_cipc("/v2/relay/request", param, player_id)
     return response, result_of(response)
 
@@ -156,24 +170,28 @@ def run(state, index: int, seconds: float = 8.0) -> dict:
     device = state.devices[index]
     client = state.client
     results = []
+    # (etiqueta, customParams de audio, qué URL usar)
     plans = [
-        ("request pre=0 HD pull=2", "request", 0, "HD", "2"),
-        ("request pre=1 HD pull=2", "request", 1, "HD", "2"),
-        ("preconnection HD pull=2", "preconn", 1, "HD", "2"),
-        ("request pre=0 HD pull=1", "request", 0, "HD", "1"),
+        ("relayUrl", False, "relayUrl"),
+        ("relayUrl + audio", True, "relayUrl"),
+        ("relayBusinessUrl", False, "relayBusinessUrl"),
+        ("relayBusinessUrl + audio", True, "relayBusinessUrl"),
+        ("cdnUrl + audio", True, "cdnUrl"),
     ]
-    for label, kind, pre, resolution, pull in plans:
+    for label, custom, which in plans:
         player_id = str(uuid.uuid4())
         entry: dict = {"plan": label}
         try:
-            if kind == "request":
-                response, info = _relay_from_request(client, state.base_url, device, pre, resolution, player_id)
-            else:
-                response, info = _relay_from_preconnection(client, state.base_url, device, resolution, player_id)
+            response, info = _relay_from_request(client, state.base_url, device, 0, "HD", player_id, custom)
             entry["cloud_code"] = error_code(response)
-            entry["relay_info"] = _describe(info)
-            if info:
-                entry["relay"] = _open_relay(client, device, info, player_id, pull, seconds)
+            entry["url_shapes"] = {k: _url_shape(str(info.get(k) or "")) for k in ("relayUrl", "relayBusinessUrl", "cdnUrl")}
+            target = str(info.get(which) or "")
+            if which == "cdnUrl" and target:
+                base = urlsplit(target if "://" in target else "https://" + target)
+                relay = urlsplit(str(info.get("relayUrl") or ""))
+                target = f"https://{base.hostname}{relay.path}" + (f"?{relay.query}" if relay.query else "")
+            if target:
+                entry["relay"] = _open_relay(client, device, {**info, "relayUrl": target}, player_id, "2", seconds)
         except Exception as exc:  # noqa: BLE001 - diagnóstico
             entry["error"] = f"{type(exc).__name__}: {exc}"
         results.append(entry)

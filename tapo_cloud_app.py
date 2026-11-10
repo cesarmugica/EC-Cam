@@ -555,7 +555,11 @@ class CloudMediaWorker:
                 self.last_error = ""
             except (OSError, RuntimeError, ssl.SSLError, EOFError) as exc:
                 self._note_error(f"{type(exc).__name__}: {exc}")
-                if not self.stop.wait(2):
+                # EC-Cam: no insistir cada 2 s si la cámara está desconectada
+                # o no manda video; se reintenta mientras alguien la quiera ver.
+                text = str(exc)
+                pause = 30 if "device offline" in text else 12 if "timed out" in text else 2
+                if not self.stop.wait(pause):
                     continue
             except Exception as exc:  # Keep a broken relay from killing the worker.
                 self._note_error(f"unexpected media error: {type(exc).__name__}: {exc}")
@@ -1010,7 +1014,12 @@ class CloudMediaWorker:
         headers = bytes(buffer[:separator])
         del buffer[: separator + 4]
         if not headers.startswith(b"HTTP/1.1 200"):
-            raise RuntimeError("invalid relay HTTP response")
+            # EC-Cam: incluir el motivo que da Tapo (p. ej. "device offline").
+            body = bytes(buffer[:300]).decode("utf-8", "replace")
+            status = headers.split(b"\r\n", 1)[0].decode("latin1", "replace")
+            if "device offline" in body:
+                raise RuntimeError("device offline")
+            raise RuntimeError(f"invalid relay HTTP response: {status} {body[:120]}")
         return headers
 
     @staticmethod

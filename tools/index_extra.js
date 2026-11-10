@@ -45,6 +45,7 @@
         const session = await api('/api/app/session');
         if (!session.app_authenticated) { location.replace(session.needs_setup ? '/setup' : '/login'); return; }
         appUser = {user: session.user, role: session.role};
+        const footer = document.querySelector('.app-footer'); if (footer && session.version) footer.insertAdjacentText('afterbegin', `Versión ${session.version} · `);
         document.querySelector('#userChip').innerHTML = `<strong>${esc(appUser.user)}</strong> · ${roleName(appUser.role)}`;
         document.querySelector('#usersButton').classList.toggle('hidden', !isAdmin());
       } catch (_) { location.replace('/login'); return; }

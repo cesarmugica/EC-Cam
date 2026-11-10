@@ -218,11 +218,21 @@
       }
       function restart(entry, reason) {
         if (!entry.running && entry.retryTimer) return;
+        const quality = entry.quality || entry.wantedQuality;
         stop(entry);
-        const delay = Math.min(1000 * (2 ** entry.attempts), 10000);
+        let delay = Math.min(1000 * (2 ** entry.attempts), 10000);
         entry.attempts = Math.min(entry.attempts + 1, 4);
         setOverlay(entry, 'error', reason);
-        entry.retryTimer = setTimeout(() => { entry.retryTimer = null; if (entry.wanted) start(entry, entry.wantedQuality); }, delay);
+        const schedule = ms => { clearTimeout(entry.retryTimer); entry.retryTimer = setTimeout(() => { entry.retryTimer = null; if (entry.wanted) start(entry, entry.wantedQuality); }, ms); };
+        schedule(delay);
+        // Preguntar al servidor el motivo: si la cámara está desconectada o no
+        // manda video, avisarlo claro y esperar más antes de reintentar.
+        fetch(`/api/app/stream-status?cam=${encodeURIComponent(entry.card.dataset.id)}&q=${quality}`, {credentials: 'same-origin'})
+          .then(r => r.json()).then(status => {
+            if (!entry.retryTimer) return;
+            if (status.kind === 'offline') { setOverlay(entry, 'error', 'Cámara sin conexión (según Tapo). Reintento en 1 min.'); schedule(60000); }
+            else if (status.kind === 'silent') { setOverlay(entry, 'error', 'La cámara no está enviando video. Reintento en 30 s.'); schedule(30000); }
+          }).catch(() => {});
       }
       function refresh() {
         clearTimeout(timer);
@@ -525,6 +535,7 @@
         const session = await api('/api/app/session');
         if (!session.app_authenticated) { location.replace(session.needs_setup ? '/setup' : '/login'); return; }
         appUser = {user: session.user, role: session.role};
+        const footer = document.querySelector('.app-footer'); if (footer && session.version) footer.insertAdjacentText('afterbegin', `Versión ${session.version} · `);
         document.querySelector('#userChip').innerHTML = `<strong>${esc(appUser.user)}</strong> · ${roleName(appUser.role)}`;
         document.querySelector('#usersButton').classList.toggle('hidden', !isAdmin());
       } catch (_) { location.replace('/login'); return; }

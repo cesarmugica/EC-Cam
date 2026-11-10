@@ -35,7 +35,7 @@ from http.server import ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlsplit
 
-APP_VERSION = "1.0.3"
+APP_VERSION = "1.0.4"
 ROOT = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent))
 EXE_DIR = Path(sys.executable).resolve().parent if getattr(sys, "frozen", False) else ROOT
 WEB_ROOT = ROOT / "web"
@@ -305,6 +305,31 @@ class EcCamHandler(engine.Handler):
                 self._deny(403, "Solo un administrador puede ver los usuarios.")
                 return
             self.send_json({"ok": True, "users": self.auth.list_users()})
+            return
+        if path == "/api/app/stream-status":
+            from urllib.parse import parse_qs
+            query = parse_qs(urlsplit(self.path).query)
+            state = self.context.current_state()
+            message = ""
+            try:
+                index = int(query.get("cam", ["0"])[0])
+                quality = query.get("q", ["SD"])[0].upper()
+                if state is not None:
+                    key = index if quality == engine.STREAM_RESOLUTION else (index, quality)
+                    with state.workers_lock:
+                        worker = state.workers.get(key)
+                    if worker is not None:
+                        message = worker.last_error
+            except ValueError:
+                pass
+            kind = "ok"
+            if "device offline" in message:
+                kind = "offline"
+            elif "timed out" in message:
+                kind = "silent"
+            elif message:
+                kind = "error"
+            self.send_json({"ok": True, "kind": kind, "error": message})
             return
         if path == "/api/app/diag":
             if user["role"] != "admin":
