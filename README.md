@@ -48,7 +48,7 @@ EC-Cam funciona con cámaras Tapo que se ven en la app oficial **por la nube** (
 | C200 | 1.9.1 Build 260326 | ✅ | ✅ | ✅ |
 | C200 | 1.3.17 Build 260112 Rel.58281n | ✅ (desde 1.0.6) | ✅ (desde 1.1.2) | ❌ la cámara responde `-52402` |
 | C200 | 1.3.17 Build 260112 Rel.54862n | ✅ | sin probar | sin probar |
-| C500 | 1.3.5 Build 260810 | ✅ | sin probar | sin probar |
+| C500 (2 cámaras) | 1.3.5 Build 260810 Rel.59315n | ✅ | sin probar | sin probar |
 
 - **Otros modelos** de cámara Tapo con conexión a la nube (por ejemplo C100, C110, C210, C220, C310, C320WS, C510W, C520WS) **probablemente funcionen**, porque usan el mismo servicio de la nube, pero **no se han probado**. El movimiento (pan/tilt) solo aparece en cámaras que lo tienen.
 - **Cámaras de batería** (C400, C420, C425…) y cámaras conectadas a un **Hub** (H200): **sin probar y probablemente no funcionen**, porque se duermen para ahorrar batería y la nube las maneja distinto.
@@ -145,7 +145,7 @@ See your **Tapo** cameras on your Windows PC, without an Android emulator or the
 | C200 | 1.9.1 Build 260326 | ✅ | ✅ | ✅ |
 | C200 | 1.3.17 Build 260112 Rel.58281n | ✅ | ✅ | ❌ camera returns `-52402` |
 | C200 | 1.3.17 Build 260112 Rel.54862n | ✅ | not tested | not tested |
-| C500 | 1.3.5 Build 260810 | ✅ | not tested | not tested |
+| C500 (2 cameras) | 1.3.5 Build 260810 Rel.59315n | ✅ | not tested | not tested |
 
 Other cloud-connected Tapo cameras (C100, C110, C210, C220, C310, C320WS, C510W, C520WS…) will **probably work** since they use the same cloud service, but they are **not tested**. Battery cameras (C400/C420/C425) and Hub-connected cameras are not tested and probably won't work.
 

@@ -226,4 +226,4 @@ FFmpeg toma el MPEG-TS y lo reempaqueta **sin recodificar** a MP4 fragmentado (`
 
 - [Topo](https://github.com/filirnd/topo), licencia MIT: login, firma, relay, control y grabaciones.
 - [tapo-view](https://github.com/tothi/tapo-view): protocolo multipart de vista previa, confirmaciones y latido.
-- Pruebas con cámaras reales (C200 firmwares 1.3.17 y 1.9.1, C500 1.3.5) en noviembre de 2026.
+- Pruebas con cámaras reales (C200 firmwares 1.3.17 y 1.9.1, C500 1.3.5 Build 260810 Rel.59315n) en noviembre de 2026.
