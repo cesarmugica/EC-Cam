@@ -1,0 +1,7 @@
+EC-Cam is based on Topo (https://github.com/filirnd/topo), also MIT licensed.
+Its original copyright and permission notice are kept in LICENSE-TOPO.txt and
+apply to the portions derived from Topo (src/tapo_cloud_app.py,
+src/tapo_cloud_probe.py, src/certs/ and tools/plantilla/index.topo.html).
+
+EC-Cam is an independent project and is not affiliated with or endorsed by
+TP-Link. "Tapo" and "TP-Link" are trademarks of their respective owners.
