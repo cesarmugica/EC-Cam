@@ -1,121 +1,80 @@
 # EC-Cam
 
-Ver tus cámaras **Tapo** en vivo desde cualquier lugar, en una página web que se instala como app (PWA), igual que DGPOS / DGPOSR.
+Ver tus cámaras **Tapo** en la PC, sin emulador de Android y sin la app del celular.
 
-- Video en vivo (baja latencia), audio, mover la cámara (pan/tilt), modo privacidad.
+- Video en vivo, audio, mover la cámara (pan/tilt), modo privacidad y pantalla completa.
 - Grabaciones de la memoria SD: línea de tiempo, reproducir y descargar en MP4.
-- Login propio de EC-Cam, con usuarios **Administrador** y **Visor**.
-- Se instala en el celular o la PC con el botón **Instalar** (Android, Chrome/Edge) o «Agregar a pantalla de inicio» (iPhone).
-- No necesitas RTSP, abrir puertos ni VPN: el servidor habla con la nube de Tapo.
+- Funciona desde cualquier lugar con internet: se conecta por la nube de Tapo, igual que la app oficial. No hace falta estar en la misma red que las cámaras, abrir puertos ni usar VPN.
+- Ligero: transmite solo la cámara que estás viendo.
 
-El motor de video viene de [Topo 0.1.7](https://github.com/filirnd/topo) (licencia MIT, ver `LICENSE-TOPO.txt`).
+El motor de video viene de [Topo](https://github.com/filirnd/topo) (licencia MIT, ver `LICENSE-TOPO.txt`). El protocolo de vista previa para los firmwares nuevos está documentado por [tapo-view](https://github.com/tothi/tapo-view).
 
-## Video ligero
+## Instalar
 
-- **Una cámara a la vez:** arriba (o a la izquierda en PC) se ve solo la cámara elegida; se cambia con las flechas ◀ ▶, deslizando el dedo o con las flechas del teclado. La anterior deja de transmitir.
-- **Mosaico sin video:** todas las cámaras aparecen como mosaico con su nombre y la última imagen vista (foto fija).
-- Calidad HD por defecto; el selector «Calidad ligera (SD)» gasta menos datos.
-- Si la app pasa a segundo plano o se bloquea el celular, el video se detiene.
-- Si el video se congela, se reconecta solo; si la red es lenta, salta al punto en vivo.
-- Si nadie ve una cámara durante 20 s, el servidor cierra su conexión con Tapo (volver a ella en ese tiempo es instantáneo).
-- Una cámara desconectada muestra «Cámara sin conexión (según Tapo)» y reintenta cada minuto.
-
-## Cómo funciona
-
-```
-Celular / PC  ──HTTPS──▶  Cloudflare Tunnel  ──▶  PC servidor (EC-Cam :8790)  ──▶  Nube Tapo  ──▶  Cámaras
-```
-
-Una PC de la casa u oficina corre el **servidor EC-Cam** (sin ventana, arranca con Windows). Esa PC guarda la sesión de Tapo y convierte el video con FFmpeg. Cloudflare Tunnel publica el servidor en internet con HTTPS, sin abrir puertos en el módem.
-
-## Instalar en la PC servidor
-
-1. Ejecuta `EC-Cam-Setup-x.y.z.exe`. No pide permisos de administrador.
+1. Descarga `EC-Cam-Setup-x.y.z.exe` de la sección **Releases** y ejecútalo. No pide permisos de administrador.
    - Si Windows muestra «Windows protegió tu PC»: **Más información → Ejecutar de todas formas** (el instalador no está firmado).
-   - Si el Firewall de Windows pregunta, permite **redes privadas** (sirve para entrar desde otros equipos de la misma red).
-2. Al terminar se abre `http://127.0.0.1:8790/setup`: crea el **usuario administrador** de EC-Cam.
-   (La configuración inicial solo funciona en la propia PC servidor, nunca a través de internet).
-3. Conecta tu **cuenta Tapo** (correo y contraseña de Tapo + verificación en dos pasos si la pide). La contraseña de Tapo no se guarda; solo la sesión.
-4. Publica el servidor en internet: ver [docs/TUNEL.md](docs/TUNEL.md).
-5. Desde tu celular abre `https://camaras.tudominio.com`, entra y toca **Instalar**.
+2. Se abre EC-Cam en el navegador. Entra con el **correo y la contraseña de tu cuenta Tapo** (los mismos de la app del celular) y completa la verificación en dos pasos si la pide.
+3. Listo. La próxima vez entras directo: EC-Cam guarda la sesión de Tapo en tu PC (nunca la contraseña).
 
-En el menú Inicio quedan: **EC-Cam** (inicia y abre), **Detener servidor EC-Cam** y **Carpeta de datos de EC-Cam**.
+Opcional: con el botón **⤓ Instalar app** (Chrome o Edge) EC-Cam queda en su propia ventana, como un programa más.
 
-## Usuarios
+En el menú Inicio quedan **EC-Cam**, **Detener servidor EC-Cam** y **Carpeta de datos de EC-Cam**. Si marcaste la opción al instalar, EC-Cam arranca con Windows.
 
-| | Visor | Administrador |
-|---|:---:|:---:|
-| Ver en vivo, audio, pantalla completa | ✓ | ✓ |
-| Mover la cámara | ✓ | ✓ |
-| Grabaciones de la SD (ver/descargar) | ✓ | ✓ |
-| Activar / quitar privacidad | | ✓ |
-| Conectar / desconectar la cuenta Tapo | | ✓ |
-| Administrar usuarios | | ✓ |
+## Uso
 
-Se administran desde **👥 Usuarios** en la página. Cada quien cambia su contraseña en **⚙ Cuenta**.
+- **Visor:** muestra una cámara a la vez. Cambia con **◀ ▶**, con las flechas del teclado o haciendo clic en el mosaico de la derecha.
+- **Mosaico:** todas tus cámaras, sin video, con la última imagen que viste de cada una.
+- **Calidad:** HD por defecto; «Calidad ligera (SD)» gasta menos internet.
+- **Pantalla completa:** doble clic sobre el video o el botón ⛶.
+- Si una cámara está desconectada de la nube de Tapo, EC-Cam lo dice («Cámara sin conexión (según Tapo)») y reintenta cada minuto.
 
-Si se pierde la contraseña del administrador, en la PC servidor:
+## Privacidad y seguridad
 
-```bat
-"%LOCALAPPDATA%\Programs\EC-Cam\eccam-server.exe" --reset-password NOMBRE
-"%LOCALAPPDATA%\Programs\EC-Cam\eccam-server.exe" --add-user NOMBRE --role admin
-"%LOCALAPPDATA%\Programs\EC-Cam\eccam-server.exe" --list-users
-```
+- EC-Cam corre en tu PC y solo responde dentro de ella (`127.0.0.1`); nadie más en tu red puede abrirlo.
+- Rechaza peticiones de otras páginas web (protección contra *DNS rebinding* y CSRF).
+- La contraseña de Tapo no se guarda; la sesión queda en `%LOCALAPPDATA%\EC-Cam\state\session.json`. Trátala como una llave: no la compartas.
+- **Cerrar sesión de Tapo** borra esa sesión.
 
-## Seguridad
-
-- Contraseñas de EC-Cam con PBKDF2-SHA256 (310 000 iteraciones); nunca en texto plano.
-- Sesión en cookie `HttpOnly`, `SameSite=Lax` y `Secure` cuando llega por HTTPS; dura 30 días y se renueva con el uso. En disco solo se guarda el hash del token.
-- Bloqueo de 15 minutos tras 5 intentos fallidos desde la misma IP (o 20 contra el mismo usuario).
-- Protección CSRF: todas las acciones exigen JSON y mismo origen.
-- El reproductor nativo de Topo (abre ventanas en la PC) está desactivado.
-- Trata la carpeta de datos como una llave: contiene la sesión de Tapo.
-
-## Datos y configuración
+## Datos
 
 Carpeta: `%LOCALAPPDATA%\EC-Cam\`
 
 | Archivo | Qué es |
 |---|---|
-| `config.json` | `host`, `port` (8790), `trust_local_proxy`, `open_browser_on_start` |
-| `users.json` | usuarios de EC-Cam (hash de contraseñas) |
-| `sessions.json` | sesiones abiertas (hash del token) |
-| `state\session.json` | sesión de la cuenta Tapo |
-| `logs\eccam.log` | registro del servidor |
+| `config.json` | `port` (8790) y `open_browser_on_start` |
+| `state\session.json` | sesión de tu cuenta Tapo |
+| `logs\eccam.log` | registro (útil si algo falla) |
 
-Para cambiar el puerto, edita `config.json` y reinicia el servidor.
+## Problemas comunes
 
-## Compilar el instalador
+| Síntoma | Qué hacer |
+|---|---|
+| «Cámara sin conexión (según Tapo)» | La cámara no está conectada a internet: revisa su corriente y wifi. |
+| «La cámara no está enviando video» | Prueba **Actualizar**; si sigue, revisa que la cámara se vea en la app Tapo. |
+| El video se congela | Se reconecta solo; con internet lento usa «Calidad ligera (SD)». |
+| No abre la página | Menú Inicio → **EC-Cam** (inicia el servidor y abre el navegador). |
 
-En una PC con Windows, **Python 3.12** e **Inno Setup 6**:
+## Para desarrolladores
+
+GitHub Actions compila el instalador en cada push a `main` y publica un Release cuando cambia `APP_VERSION` en `eccam_server.py`. Para compilar a mano en Windows (Python 3.12 + Inno Setup 6):
 
 ```powershell
-cd D:\XX-Software\Z-Propio\ECCAM\eccam
 powershell -ExecutionPolicy Bypass -File .\windows\build.ps1
 ```
 
-Resultado: `windows\out\EC-Cam-Setup-<versión>.exe`. El script descarga FFmpeg la primera vez y lo mete dentro del instalador.
-
-Para probar sin instalar (necesita FFmpeg en el PATH): `windows\ejecutar-desarrollo.bat`.
-
-## Estructura
-
 ```
-eccam_server.py        servidor EC-Cam (login, roles, PWA, rutas)
-eccam_auth.py          usuarios, contraseñas, sesiones, límite de intentos
-tapo_cloud_app.py      motor de Topo: video, audio, PTZ, grabaciones
-tapo_cloud_probe.py    motor de Topo: API de la nube Tapo y MFA
-certs/                 certificados raíz de TP-Link
-web/                   index.html, login.html, manifest.json, sw.js, pwa.js, offline.html, img/
-windows/               build.ps1, eccam.iss (Inno Setup), .bat de ayuda
-tools/                 make_icons.py y build_index.py (regenera web/index.html desde el de Topo)
+eccam_server.py        servidor local (rutas, seguridad, diagnóstico)
+tapo_cloud_app.py      motor de Topo + mejoras: video, audio, PTZ, grabaciones
+tapo_cloud_probe.py    motor de Topo: API de la nube Tapo y verificación en dos pasos
+eccam_relaytest.py     prueba de conexión por cámara (/api/app/relaytest?cam=N)
+web/                   index.html, manifest.json, sw.js, pwa.js, offline.html, img/
+tools/                 build_index.py genera web/index.html desde el de Topo
+windows/               build.ps1 e instalador (Inno Setup)
 ```
 
-Si actualizas Topo a una versión nueva: reemplaza `tapo_cloud_app.py`, `tapo_cloud_probe.py` y `web/index.topo.html`, vuelve a aplicar los cambios de rutas de `session_path()` y corre `python tools/build_index.py`. El script avisa qué textos ya no encontró.
+Diagnóstico: `http://127.0.0.1:8790/api/app/diag` muestra el estado de cada cámara.
 
 ## Limitaciones
 
-- Usa endpoints no documentados de la nube Tapo (los de la app de Android); si TP-Link los cambia, puede dejar de funcionar hasta que se actualice el motor.
-- La PC servidor debe estar encendida y con internet.
-- Probado por Topo en Tapo C200; otros modelos deberían funcionar, pero el pan/tilt depende del modelo.
-- El audio en vivo requiere un toque en **Activar audio** (los navegadores bloquean el sonido automático).
+- Usa endpoints no documentados de la nube Tapo; si TP-Link los cambia, puede dejar de funcionar hasta actualizarse.
+- Probado con Tapo C200 (firmwares 1.3.17 y 1.9.1) y C500.
