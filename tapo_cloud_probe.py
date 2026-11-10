@@ -886,6 +886,13 @@ class TapoCloud:
         try:
             return self._download_recording_once(base_url, device, start, end, out_path, progress, "[0,1]")
         except RecordingRefused as first:
+            if "-52402" in str(first):
+                # Comprobado: el C200 1.3.17 build 58281 rechaza toda variante
+                # de la petición con -52402; el 1.9.1 la acepta. No reintentar.
+                raise RuntimeError(
+                    f"Esta cámara (firmware {device.get('fwVer') or 'desconocido'}) no permite "
+                    "reproducir grabaciones desde EC-Cam todavía. Puedes verlas en la app Tapo."
+                ) from first
             print(f"EC-Cam: reproducción rechazada con canales [0,1] ({first}); se reintenta con [0]", flush=True)
             try:
                 return self._download_recording_once(base_url, device, start, end, out_path, progress, "[0]")
