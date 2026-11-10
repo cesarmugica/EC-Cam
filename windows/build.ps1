@@ -10,6 +10,7 @@
 $ErrorActionPreference = 'Stop'
 $scriptDir   = Split-Path -Parent $MyInvocation.MyCommand.Path
 $projectRoot = (Resolve-Path (Join-Path $scriptDir '..')).Path
+$srcRoot     = Join-Path $projectRoot 'src'
 $ffmpegUrl   = if ($env:ECCAM_FFMPEG_URL) { $env:ECCAM_FFMPEG_URL } else { 'https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip' }
 
 function Invoke-Checked([string]$FilePath, [string[]]$ArgumentList = @()) {
@@ -18,7 +19,7 @@ function Invoke-Checked([string]$FilePath, [string[]]$ArgumentList = @()) {
 }
 
 # --- versión (de eccam_server.py) ---
-$version = (Select-String -Path (Join-Path $projectRoot 'eccam_server.py') -Pattern '^APP_VERSION = "(.+)"').Matches[0].Groups[1].Value
+$version = (Select-String -Path (Join-Path $srcRoot 'eccam_server.py') -Pattern '^APP_VERSION = "(.+)"').Matches[0].Groups[1].Value
 Write-Host "EC-Cam $version" -ForegroundColor Cyan
 
 # --- Python ---
@@ -59,7 +60,7 @@ if (-not (Test-Path $ffmpegCache)) {
 # --- Fecha de publicación (hora de Ciudad de México) ---
 try { $tz = [TimeZoneInfo]::FindSystemTimeZoneById('Central Standard Time (Mexico)') } catch { $tz = [TimeZoneInfo]::Local }
 $buildDate = [TimeZoneInfo]::ConvertTimeFromUtc([DateTime]::UtcNow, $tz).ToString('yyyy-MM-dd HH:mm')
-Set-Content -Path (Join-Path $projectRoot 'eccam_build.py') -Value "BUILD_DATE = `"$buildDate`"" -Encoding ascii
+Set-Content -Path (Join-Path $srcRoot 'eccam_build.py') -Value "BUILD_DATE = `"$buildDate`"" -Encoding ascii
 Write-Host "Fecha de publicación: $buildDate"
 
 # --- Servidor (PyInstaller, carpeta, sin consola) ---
@@ -67,9 +68,10 @@ Write-Host 'Compilando el servidor...'
 Invoke-Checked $python ($pythonArgs + @(
   '-m', 'PyInstaller', '--clean', '--noconfirm', '--onedir', '--noconsole',
   '--name', 'eccam-server',
-  '--icon', (Join-Path $projectRoot 'web\img\eccam.ico'),
-  '--add-data', "$(Join-Path $projectRoot 'web');web",
-  '--add-data', "$(Join-Path $projectRoot 'certs');certs",
+  '--icon', (Join-Path $srcRoot 'web\img\eccam.ico'),
+  '--add-data', "$(Join-Path $srcRoot 'web');web",
+  '--add-data', "$(Join-Path $srcRoot 'certs');certs",
+  '--paths', $srcRoot,
   '--exclude-module', 'tkinter',
   # Módulos propios: incluirlos siempre aunque se carguen dentro de funciones.
   '--hidden-import', 'tapo_cloud_app', '--hidden-import', 'tapo_cloud_probe',
@@ -77,7 +79,7 @@ Invoke-Checked $python ($pythonArgs + @(
   '--distpath', $distDir,
   '--workpath', (Join-Path $scriptDir '.build'),
   '--specpath', (Join-Path $scriptDir '.build'),
-  (Join-Path $projectRoot 'eccam_server.py')
+  (Join-Path $srcRoot 'eccam_server.py')
 ))
 # Verificar que los módulos propios quedaron dentro del ejecutable.
 $xref = Get-ChildItem -Path (Join-Path $scriptDir '.build') -Filter 'xref-*.html' -Recurse | Select-Object -First 1

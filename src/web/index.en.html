@@ -1,0 +1,657 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>EC-Cam</title>
+  <link rel="manifest" href="/manifest.json">
+  <link rel="icon" href="/img/favicon.png">
+  <link rel="apple-touch-icon" href="/img/pwa-192.png">
+  <meta name="theme-color" content="#121614">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="EC-Cam Web">
+  <script src="/pwa.js?v=1" defer></script>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --bg: #121614; --surface: #1b201d; --surface-2: #252c28; --surface-3: #313a35;
+      --border: #2e3732; --muted: #9aa6a0; --text: #f3f5f4;
+      --accent: #F07C1E; --accent-strong: #ff9a45; --success: #6fcf97;
+      --warning: #f2c94c; --danger: #8e2f25; --shadow: 0 14px 30px rgba(0, 0, 0, .35);
+    }
+    *, *::before, *::after { box-sizing: border-box; }
+    html { min-width: 320px; background: var(--bg); }
+    body { min-height: 100vh; margin: 0; background: var(--bg); color: var(--text); }
+    button, input, select { font: inherit; }
+    button { border: 0; border-radius: 10px; padding: 10px 13px; background: var(--accent); color: #fff; font-weight: 600; cursor: pointer; transition: background .16s ease, transform .16s ease, opacity .16s ease; }
+    button:hover:not(:disabled) { filter: brightness(1.12); transform: translateY(-1px); }
+    button:focus-visible, input:focus-visible, select:focus-visible, .preview:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+    button.secondary { background: var(--surface-2); color: var(--text); } button.secondary:hover:not(:disabled) { background: var(--accent-strong); }
+    button.ghost { background: var(--surface); border: 1px solid var(--border); color: var(--text); }
+    button.danger { background: var(--danger); border: 1px solid var(--danger); color: #fff; }
+    button:disabled { cursor: wait; opacity: .58; transform: none; }
+    .hidden { display: none !important; }
+    .app-header { position: sticky; top: 0; z-index: 20; display: flex; align-items: center; justify-content: space-between; gap: 18px; min-height: 78px; padding: 13px clamp(16px, 4vw, 44px); border-bottom: 1px solid var(--border); background: var(--surface); }
+    .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+    .brand-icon { width: 48px; height: 48px; border-radius: 14px; flex: 0 0 auto; object-fit: cover; box-shadow: 0 8px 22px var(--bg); }
+    .brand-copy { min-width: 0; } h1 { margin: 0; overflow: hidden; font-size: clamp(1rem, 2vw, 1.25rem); line-height: 1.2; text-overflow: ellipsis; white-space: nowrap; }
+    .brand-subtitle { margin-top: 4px; color: var(--muted); font-size: .78rem; }
+    #account { display: flex; align-items: center; justify-content: flex-end; gap: 9px; flex-wrap: wrap; }
+    #state { display: inline-flex; align-items: center; gap: 7px; color: var(--muted); font-size: .84rem; white-space: nowrap; }
+    #state::before { width: 8px; height: 8px; border-radius: 50%; background: var(--warning); content: ""; }
+    #state.ok::before { background: var(--success); } #state.bad::before { background: var(--danger); }
+    .header-actions { display: flex; gap: 8px; } .header-actions button { margin: 0; padding: 8px 10px; font-size: .85rem; }
+    main { width: min(1700px, 100%); margin: 0 auto; padding: clamp(18px, 3vw, 34px) clamp(16px, 4vw, 44px) 44px; }
+    .toolbar { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 18px; }
+    .toolbar h2 { margin: 0; font-size: clamp(1.2rem, 2.5vw, 1.6rem); } .toolbar p { margin: 5px 0 0; color: var(--muted); font-size: .88rem; }
+    .toolbar-actions { display: flex; gap: 8px; } .toolbar-actions button { margin: 0; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 350px), 1fr)); gap: 20px; align-items: start; }
+    .card { position: relative; overflow: visible; border: 1px solid var(--border); border-radius: 18px; background: var(--surface); box-shadow: var(--shadow); }
+    .card.movement-open { z-index: 20; }
+    .card:focus-within { border-color: var(--accent); }
+    .preview { position: relative; display: grid; place-items: center; aspect-ratio: 16 / 9; overflow: hidden; border-radius: 17px 17px 0 0; background: var(--bg); color: var(--muted); text-align: center; cursor: zoom-in; }
+    .preview img, .preview video { width: 100%; height: 100%; display: block; object-fit: contain; } .preview::after { position: absolute; inset: 0; pointer-events: none; border: 1px solid var(--border); content: ""; }
+    .audio-controls { position: absolute; right: 12px; bottom: 12px; z-index: 4; display: flex; align-items: center; gap: 7px; } .audio-toggle { position: static; margin: 0; padding: 7px 10px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface); color: var(--text); font-size: .78rem; } .audio-toggle.active { background: var(--accent); } .audio-toggle:disabled { cursor: wait; opacity: .75; } .audio-volume { display: none; width: 82px !important; height: 28px; margin: 0; padding: 0 !important; accent-color: var(--accent); } .audio-controls.active .audio-volume { display: block; } .live-audio { display: none; }
+    .preview-status { position: absolute; inset: auto 12px 12px 12px; z-index: 2; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 9px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg); color: var(--text); font-size: .84rem; }
+    .preview-status.loading::before { width: 13px; height: 13px; border: 2px solid var(--muted); border-top-color: var(--text); border-radius: 50%; animation: spin .8s linear infinite; content: ""; }
+    .preview-status.error { color: var(--text); } .preview-status.error::before { content: "!"; width: 18px; height: 18px; display: inline-grid; place-items: center; border-radius: 50%; background: var(--surface-2); color: var(--text); font-weight: 800; }
+    .privacy-overlay { display: grid; gap: 6px; place-items: center; padding: 20px; color: var(--warning); } .privacy-overlay strong { color: var(--text); }
+    .badge-row { position: absolute; top: 12px; left: 12px; right: 12px; z-index: 3; display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; pointer-events: none; }
+    .badge { display: inline-flex; align-items: center; gap: 6px; padding: 6px 9px; border: 1px solid var(--border); border-radius: 999px; background: var(--bg); color: var(--text); font-size: .73rem; font-weight: 700; }
+    .badge::before { width: 7px; height: 7px; border-radius: 50%; background: var(--warning); content: ""; } .badge.privacy::before { background: var(--warning); }
+    .card-body { padding: 16px 17px 18px; border-radius: 0 0 17px 17px; } .card-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+    .name { margin: 0; font-size: 1.06rem; font-weight: 750; } .meta { margin-top: 5px; color: var(--muted); font-size: .82rem; line-height: 1.4; }
+    .result { min-height: 1.2em; } .ok { color: var(--success); } .bad { color: var(--text); } .privacy-on { color: var(--warning); }
+    .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 15px; padding-top: 14px; border-top: 1px solid var(--border); } .actions > button { margin: 0; flex: 1 1 auto; min-width: 125px; padding: 9px 10px; font-size: .84rem; }
+    .movement-control { position: relative; flex: 0 0 auto; }
+    .movement-toggle { width: auto; min-width: 125px !important; padding: 9px 10px !important; font-size: .84rem; font-weight: inherit; white-space: nowrap; }
+    .movement-unavailable { flex: 1 1 100%; }
+    .movement-panel { position: absolute; top: calc(100% + 10px); right: 0; z-index: 10; width: min(252px, calc(100vw - 32px)); min-height: 0; margin: 0; padding: 15px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface-2); box-shadow: 0 14px 28px var(--bg); }
+    .movement-panel.opens-up { top: auto; bottom: calc(100% + 10px); }
+    .movement-panel.detached { position: fixed; top: 50%; right: auto; bottom: auto; left: 50%; z-index: 1000; width: min(252px, calc(100vw - 32px)); max-height: calc(100vh - 32px); overflow-y: auto; transform: translate(-50%, -50%); }
+    .ptz-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 14px; padding-bottom: 12px; border-bottom: 1px solid var(--border); } .ptz-toolbar .meta { margin: 0; font-size: .8rem; font-weight: 700; } .step-select { width: 84px; min-width: 84px; padding: 6px 8px; border-radius: 7px; font-size: .8rem; }
+    .ptz { display: grid; grid-template-columns: repeat(3, 40px); gap: 5px; margin: 0 auto; justify-content: center; } .ptz button { width: 40px; height: 40px; margin: 0; padding: 0; border: 1px solid var(--border); border-radius: 9px; background: var(--surface-3); font-size: 1rem; }
+    .ptz button:hover:not(:disabled) { background: var(--accent); color: #fff; } .ptz .up { grid-column: 2; grid-row: 1; } .ptz .left { grid-column: 1; grid-row: 2; } .ptz .center { grid-column: 2; grid-row: 2; } .ptz .right { grid-column: 3; grid-row: 2; } .ptz .down { grid-column: 2; grid-row: 3; }
+    .ptz .center { background: var(--surface-2); color: var(--muted); cursor: default; } .ptz-result { min-height: 1.2em; margin: 13px 0 0; text-align: center; } .retry-button { margin: 0; padding: 7px 10px; background: var(--surface-2); color: var(--text); font-size: .8rem; }
+    .commands-handle { display: none; position: absolute; left: 50%; bottom: 18px; z-index: 7; transform: translateX(-50%); margin: 0; padding: 11px 24px; border: 1px solid var(--accent); border-radius: 999px; background: var(--bg); box-shadow: 0 8px 22px var(--bg); font-weight: 700; }
+    .commands-handle:hover:not(:disabled) { transform: translateX(-50%) translateY(-1px); }
+    .card:fullscreen, .card:-webkit-full-screen, .card.is-fullscreen { width: 100vw; height: 100vh; overflow: hidden; border: 0; border-radius: 0; background: var(--bg); }
+    .card:fullscreen .preview, .card:-webkit-full-screen .preview, .card.is-fullscreen .preview { width: 100%; height: 100%; min-height: 0; aspect-ratio: auto; cursor: default; }
+    .card:fullscreen .card-body, .card:-webkit-full-screen .card-body, .card.is-fullscreen .card-body { position: absolute; right: 0; bottom: 0; left: 0; z-index: 6; max-height: min(72vh, 650px); overflow-y: auto; padding: 18px clamp(16px, 4vw, 44px) 74px; border-top: 1px solid var(--border); background: var(--surface); box-shadow: 0 -18px 36px var(--bg); transform: translateY(105%); transition: transform .22s ease; }
+    .card:fullscreen .movement-control, .card:-webkit-full-screen .movement-control, .card.is-fullscreen .movement-control { flex-basis: 100%; }
+    .card:fullscreen .movement-panel, .card:-webkit-full-screen .movement-panel, .card.is-fullscreen .movement-panel { position: static; width: 100%; min-height: 0; margin-top: 10px; box-shadow: none; }
+    .card:fullscreen.commands-open .card-body, .card:-webkit-full-screen.commands-open .card-body, .card.is-fullscreen.commands-open .card-body { transform: translateY(0); }
+    .card:fullscreen .commands-handle, .card:-webkit-full-screen .commands-handle, .card.is-fullscreen .commands-handle { display: block; }
+    /* Keep the fullscreen controls handle anchored to the viewport center.
+       The drawer scrollbar/content must not change its containing block. */
+    .card:fullscreen .commands-handle, .card:-webkit-full-screen .commands-handle, .card.is-fullscreen .commands-handle { position: fixed; left: 50%; right: auto; bottom: 18px; width: max-content; }
+    .card:fullscreen .badge-row, .card:-webkit-full-screen .badge-row, .card.is-fullscreen .badge-row { top: 18px; left: 20px; right: 20px; }
+    .login-wrap { min-height: calc(100vh - 78px); display: grid; place-items: center; padding: 28px 16px; } .login-card { width: min(440px, 100%); padding: clamp(22px, 5vw, 34px); border: 1px solid var(--border); border-radius: 20px; background: var(--surface); box-shadow: var(--shadow); }
+    .login-brand { display: block; width: 92px; height: 92px; margin: 0 auto 18px; border-radius: 25px; object-fit: cover; } h2 { margin: 0; font-size: 1.25rem; }
+    .login-card p { margin: 8px 0 22px; color: var(--muted); line-height: 1.5; } label { display: block; margin: 15px 0 7px; color: var(--text); font-size: .86rem; font-weight: 650; }
+    input, select { width: 100%; border: 1px solid var(--border); border-radius: 9px; padding: 11px 12px; background: var(--bg); color: var(--text); } .login-card form button, .login-card > div button { width: 100%; margin-top: 18px; }
+    .login-error, .login-info { min-height: 1.35em; margin-top: 13px; font-size: .87rem; } .login-error { color: var(--text); } .login-info { color: var(--success); }
+    .empty-state { padding: 40px 20px; border: 1px dashed var(--border); border-radius: 16px; color: var(--muted); text-align: center; } .empty-state strong { display: block; color: var(--text); }
+    .recordings-modal { position: fixed; inset: 0; z-index: 50; display: flex; align-items: stretch; justify-content: center; padding: clamp(12px, 3vw, 34px); background: rgba(0, 0, 0, .65); }
+    .recordings-panel { display: flex; flex-direction: column; width: min(1120px, 100%); max-height: 100%; overflow: hidden; border: 1px solid var(--border); border-radius: 20px; background: var(--bg); box-shadow: var(--shadow); }
+    .recordings-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 18px 22px; border-bottom: 1px solid var(--border); background: var(--surface); }
+    .recordings-heading h2 { margin: 0; font-size: 1.2rem; } .recordings-heading p { margin: 5px 0 0; color: var(--muted); font-size: .84rem; }
+    .recordings-body { overflow: auto; padding: 22px; } .recordings-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 18px; }
+    .recordings-toolbar h3 { margin: 0; font-size: 1rem; } .recordings-toolbar p { margin: 4px 0 0; color: var(--muted); font-size: .82rem; }
+    .recording-days { display: flex; flex-wrap: wrap; gap: 8px; } .recording-day { min-width: 108px; padding: 9px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); text-align: left; }
+    .recording-day.active { border-color: var(--text); background: var(--surface-3); font-weight: 700; } .recording-day small { display: block; margin-top: 3px; color: var(--muted); font-size: .72rem; font-weight: 400; }
+    .timeline-card { margin-top: 20px; padding: 18px; border: 1px solid var(--border); border-radius: 16px; background: var(--surface); }
+    .timeline-topline { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 18px; } .timeline-topline strong { font-size: .92rem; } .timeline-topline span { color: var(--muted); font-size: .8rem; }
+    .timeline-hours { display: flex; justify-content: space-between; margin: 0 2px 7px; color: var(--muted); font-size: .7rem; } .timeline-track { position: relative; height: 86px; overflow: hidden; border: 1px solid var(--border); border-radius: 10px; background: repeating-linear-gradient(90deg, transparent 0, transparent calc(25% - 1px), var(--border) 25%); }
+    .timeline-segment { position: absolute; top: 11px; bottom: 11px; min-width: 6px; margin: 0; padding: 0; border: 2px solid rgba(63, 56, 52, .2); border-radius: 5px; background: var(--accent); cursor: pointer; } .timeline-segment.event { background: var(--accent); } .timeline-segment.continuous { background: var(--surface-3); }
+    .timeline-segment:hover, .timeline-segment.selected { z-index: 2; border-color: var(--text); box-shadow: 0 0 0 2px var(--bg); } .timeline-segment.event:hover:not(:disabled) { background: var(--accent-strong); } .timeline-segment.continuous:hover:not(:disabled) { background: var(--accent); color: var(--text); } .timeline-empty { display: grid; place-items: center; height: 86px; color: var(--muted); font-size: .84rem; }
+    .timeline-legend { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 12px; color: var(--muted); font-size: .76rem; } .timeline-legend span::before { display: inline-block; width: 10px; height: 10px; margin-right: 5px; border-radius: 3px; background: var(--accent); content: ''; vertical-align: -1px; } .timeline-legend .continuous::before { background: var(--surface-3); }
+    .timeline-list-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-top: 18px; color: var(--muted); font-size: .76rem; } .timeline-list-heading strong { color: var(--text); font-size: .84rem; } .timeline-segment-list { display: grid; gap: 6px; max-height: 164px; margin-top: 8px; overflow-y: auto; padding-right: 3px; }
+    .timeline-segment-item { display: grid; grid-template-columns: minmax(142px, 1.2fr) minmax(130px, 1fr) auto; align-items: center; gap: 12px; min-height: 48px; padding: 8px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg); color: var(--text); text-align: left; } .timeline-segment-item:hover, .timeline-segment-item.selected { border-color: var(--text); background: var(--surface-3); } .timeline-segment-item small { color: var(--muted); font-size: .76rem; } .timeline-segment-item .segment-kind { display: inline-flex; align-items: center; gap: 6px; } .timeline-segment-item .segment-kind::before { width: 9px; height: 9px; border-radius: 3px; background: var(--accent); content: ''; } .timeline-segment-item.continuous .segment-kind::before { background: var(--surface-3); }
+    .recording-selection { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; margin-top: 16px; padding: 12px 14px; border-radius: 10px; background: var(--surface-2); color: var(--muted); font-size: .84rem; } .recording-selection strong { color: var(--text); } .recording-selection button { flex: 0 0 auto; padding: 8px 12px; font-size: .8rem; } .recording-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+    .play-recording-button { position: relative; overflow: hidden; isolation: isolate; } .play-recording-button::after { position: absolute; z-index: -1; top: 0; bottom: 0; left: 0; width: var(--recording-progress, 0%); background: rgba(255, 255, 255, .28); content: ''; transition: width .35s ease; } .play-recording-button.is-preparing { cursor: wait; }
+    .recording-player { margin-bottom: 18px; overflow: hidden; border: 1px solid var(--border); border-radius: 12px; background: #000; } .recording-player video { display: block; width: 100%; max-height: min(52vh, 520px); background: #000; }
+    .timeline-loading { display: flex; align-items: center; gap: 9px; margin-bottom: 14px; padding: 12px 14px; border-radius: 10px; background: var(--surface-2); color: var(--muted); font-size: .84rem; } .timeline-loading::before, .recordings-status.loading::before { display: inline-block; width: 13px; height: 13px; flex: 0 0 auto; border: 2px solid var(--border); border-top-color: var(--text); border-radius: 50%; animation: spin .8s linear infinite; content: ''; }
+    .recordings-status { display: flex; align-items: center; gap: 8px; min-height: 1.3em; margin: 0 0 14px; color: var(--muted); font-size: .84rem; } .recordings-status.bad { color: var(--text); }
+    .header-actions button.icon-only { min-width: 38px; }
+    .lang-select { width: auto; padding: 8px 10px; border-radius: 10px; background: var(--surface-2); font-size: .82rem; cursor: pointer; }
+    .preview .audio-controls { top: 12px; bottom: auto; }
+    .movement-panel { right: auto; left: 0; }
+    .user-chip { color: var(--muted); font-size: .82rem; white-space: nowrap; } .user-chip strong { color: var(--text); }
+    .viewer-note { padding: 14px; border-radius: 12px; background: var(--bg); color: var(--muted); line-height: 1.5; }
+    .app-modal { position: fixed; inset: 0; z-index: 60; display: flex; align-items: flex-start; justify-content: center; padding: clamp(12px, 6vh, 70px) 16px; overflow-y: auto; background: rgba(0, 0, 0, .65); }
+    .app-modal-panel { width: min(560px, 100%); border: 1px solid var(--border); border-radius: 18px; background: var(--surface); box-shadow: var(--shadow); }
+    .app-modal-panel header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 20px; border-bottom: 1px solid var(--border); } .app-modal-panel h2 { font-size: 1.1rem; }
+    .app-modal-body { padding: 18px 20px 22px; } .app-modal-body form { display: grid; gap: 8px; } .app-modal-body label { margin: 6px 0 0; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; } .form-row label { margin-top: 6px; }
+    .user-list { display: grid; gap: 8px; margin-bottom: 18px; } .user-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg); }
+    .user-row .who { min-width: 0; overflow: hidden; text-overflow: ellipsis; } .user-row .who small { display: block; color: var(--muted); }
+    .user-row .row-actions { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; } .user-row .row-actions button { padding: 6px 9px; font-size: .78rem; }
+    .form-msg { min-height: 1.3em; margin-top: 8px; font-size: .86rem; } .form-msg.bad { color: #ff8a7a; } .form-msg.ok { color: var(--success); }
+    .app-footer { padding: 0 16px 28px; color: var(--muted); font-size: .75rem; text-align: center; } .app-footer a { color: var(--muted); }
+    @media (max-width: 520px) { .form-row { grid-template-columns: 1fr; } }
+    .preview-status.paused { cursor: pointer; border-color: var(--accent); background: rgba(18, 22, 20, .88); color: var(--text); font-weight: 600; }
+    .preview-status.paused:hover:not(:disabled) { transform: none; filter: none; background: rgba(240, 124, 30, .25); }
+    .quality-select { width: auto; padding: 9px 10px; border-radius: 10px; background: var(--surface-2); font-size: .85rem; }
+    .viewer { width: min(1100px, 100%); margin: 0 auto 28px; }
+    .viewer-bar { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+    .nav-btn { flex: 0 0 auto; width: 52px; height: 52px; padding: 0; border-radius: 50%; background: var(--surface-2); color: var(--text); font-size: 1.15rem; }
+    .nav-btn:hover:not(:disabled) { background: var(--accent); color: #fff; }
+    .viewer-title { flex: 1; min-width: 0; text-align: center; } .viewer-title strong { display: block; overflow: hidden; font-size: 1.2rem; text-overflow: ellipsis; white-space: nowrap; } .viewer-title span { color: var(--muted); font-size: .82rem; }
+    .viewer .card .name { display: none; }
+    .tiles-title { margin: 0 0 12px; color: var(--muted); font-size: .95rem; font-weight: 650; }
+    .tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 12px; }
+    .tile { display: flex; flex-direction: column; align-items: stretch; padding: 0; overflow: hidden; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); color: var(--text); text-align: left; }
+    .tile:hover:not(:disabled) { border-color: var(--muted); }
+    .tile.active { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
+    .tile-thumb { display: grid; place-items: center; aspect-ratio: 16 / 9; background: #0b0e0c center / cover no-repeat; color: var(--muted); font-size: 1.6rem; }
+    .tile-thumb .cctv-icon { width: 56px; height: auto; opacity: .85; }
+    .tile-name { padding: 9px 11px 0; overflow: hidden; font-size: .9rem; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+    .tile-meta { padding: 2px 11px 11px; color: var(--muted); font-size: .75rem; font-weight: 500; }
+    @media (max-width: 520px) { .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; } .nav-btn { width: 46px; height: 46px; } }
+    .viewer { scroll-margin-top: 96px; }
+    .viewer .preview { max-height: calc(100vh - 250px); }
+    @media (max-width: 720px) { .viewer { scroll-margin-top: 175px; } }
+    .viewer .preview video { max-height: calc(100vh - 250px); aspect-ratio: 16 / 9; }
+    @media (min-width: 1100px) {
+      .stage { display: grid; grid-template-columns: minmax(0, 1fr) 290px; gap: 26px; align-items: start; }
+      .viewer { width: 100%; margin: 0; }
+      .tiles-wrap { position: sticky; top: 96px; max-height: calc(100vh - 116px); overflow-y: auto; padding-right: 4px; }
+      .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+      .tile-name { font-size: .82rem; }
+    }
+    @media (max-width: 720px) { .toolbar-actions { flex-wrap: wrap; } .toolbar-actions .quality-select { flex: 1 1 100%; } .toolbar-actions button { min-width: 0; } }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @media (max-width: 720px) { .app-header { align-items: flex-start; } #account { align-items: flex-end; flex-direction: column; gap: 7px; } .toolbar { align-items: flex-start; flex-direction: column; } .toolbar-actions { width: 100%; } .toolbar-actions button { flex: 1; } .timeline-segment-item { grid-template-columns: 1fr auto; } .timeline-segment-item .segment-kind { grid-column: 1 / -1; grid-row: 2; } .recording-selection { align-items: stretch; flex-direction: column; } .recording-actions { justify-content: stretch; } .recording-actions button { flex: 1; } }
+    @media (max-width: 480px) { .brand-subtitle { display: none; } .brand-icon { width: 40px; height: 40px; border-radius: 12px; } .header-actions button { width: 38px; overflow: hidden; padding: 8px 0; font-size: 0; } .header-actions button::first-letter { font-size: 1rem; } .card-body { padding: 14px; } }
+  </style>
+</head>
+<body>
+  <header class="app-header">
+    <div class="brand"><img class="brand-icon" src="/img/pwa-192.png" alt=""><div class="brand-copy"><h1>EC-Cam</h1><div class="brand-subtitle">Your Tapo cameras, live</div></div></div>
+    <div id="account"><div id="state" aria-live="polite">Connecting…</div><div class="header-actions"><select id="langSelect" class="lang-select" title="Language / Idioma" aria-label="Language / Idioma"><option value="es">🌐 ES</option><option value="en">🌐 EN</option></select><button class="ghost" type="button" data-instalar style="display:none" title="Install “EC-Cam Web” as an app with its own window">⤓ Install app</button><button id="refreshButton" class="ghost icon-only hidden" type="button" title="Refresh cameras" aria-label="Refresh cameras">↻</button></div></div>
+  </header>
+  <section id="loginView" class="login-wrap"><div class="login-card">
+    <img class="login-brand" src="/img/pwa-192.png" alt=""><div id="credentialsView"><h2>Connect your Tapo account</h2><p>Sign in with your Tapo account email and password (the same as the phone app). The password is not stored: EC-Cam only keeps the session on this PC.</p>
+      <form id="loginForm"><label for="username">Tapo account email</label><input id="username" type="email" autocomplete="username" required><label for="password">Tapo password</label><input id="password" type="password" autocomplete="current-password" required><button id="loginButton" type="submit">Connect</button></form><div id="loginError" class="login-error" aria-live="polite"></div>
+    </div>
+    <div id="mfaView" class="hidden"><h2>Two-step verification</h2><p>Complete the verification requested by your Tapo account.</p><label for="mfaType">Verification method</label><select id="mfaType"></select><button id="requestMfaButton" type="button">Send code</button><label for="mfaCode">Verification code</label><input id="mfaCode" inputmode="numeric" autocomplete="one-time-code"><button id="verifyMfaButton" type="button" disabled>Verify code</button><button id="backLoginButton" class="secondary" type="button">Back</button><div id="mfaInfo" class="login-info" aria-live="polite"></div><div id="mfaError" class="login-error" aria-live="polite"></div></div>
+  </div></section>
+  <main id="appView" class="hidden"><div class="toolbar"><div><h2>Your cameras</h2><p id="cameraSummary">Loading cameras…</p></div><div class="toolbar-actions"><select id="qualitySelect" class="quality-select" title="Video quality" aria-label="Video quality"><option value="hd">HD quality</option><option value="sd">Light quality (SD)</option></select><button id="refreshMainButton" class="secondary" type="button">↻ Refresh</button><button id="logoutButton" class="danger hidden" type="button" title="Sign out of Tapo on this PC">Sign out of Tapo</button></div></div><div class="stage"><section id="viewer" class="viewer"><div class="viewer-bar"><button id="prevCam" class="nav-btn" type="button" aria-label="Previous camera" title="Previous camera (←)">◀</button><div class="viewer-title"><strong id="viewerName"></strong><span id="viewerCount"></span></div><button id="nextCam" class="nav-btn" type="button" aria-label="Next camera" title="Next camera (→)">▶</button></div><div id="viewerCard"></div></section><aside class="tiles-wrap"><h3 class="tiles-title">All cameras</h3><div id="grid" class="tiles" aria-live="polite"></div></aside></div></main>
+  <footer class="app-footer">EC-Cam · video engine based on <a href="https://github.com/filirnd/topo" target="_blank" rel="noopener">Topo</a> (MIT license)</footer>
+  <section id="recordingsModal" class="recordings-modal hidden" role="dialog" aria-modal="true" aria-labelledby="recordingsTitle"><div class="recordings-panel"><header class="recordings-header"><div class="recordings-heading"><h2 id="recordingsTitle">Recordings</h2><p id="recordingsSubtitle">SD card timeline</p></div><button id="closeRecordingsButton" class="ghost" type="button">Close</button></header><div class="recordings-body"><div class="recordings-toolbar"><div><h3>Available days</h3><p>Times are shown in the camera's time zone.</p></div><button id="refreshRecordingsButton" class="secondary" type="button">↻ Refresh</button></div><div id="recordingsStatus" class="recordings-status" aria-live="polite">Loading recordings…</div><div id="recordingDays" class="recording-days"></div><div id="timelineCard" class="timeline-card hidden"><div id="timelineLoading" class="timeline-loading hidden" aria-live="polite">Loading timeline…</div><div class="timeline-topline"><strong id="timelineDate">Timeline</strong><span id="timelineSummary"></span></div><div class="timeline-hours"><span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span><span>24:00</span></div><div id="timelineTrack" class="timeline-track"></div><div class="timeline-legend"><span>Motion / event</span><span class="continuous">Continuous recording</span></div><div class="timeline-list-heading"><strong>Recorded segments</strong><span>Use the list when segments are close together.</span></div><div id="timelineSegmentList" class="timeline-segment-list"></div><div id="recordingSelection" class="recording-selection">Choose a segment to see its time and duration.</div><div id="recordingPlayerWrap" class="recording-player hidden"><video id="recordingPlayer" controls preload="metadata"></video></div></div></div></div></section>
+  <script>
+    const grid = document.querySelector('#grid'), state = document.querySelector('#state'), loginView = document.querySelector('#loginView'), appView = document.querySelector('#appView'), credentialsView = document.querySelector('#credentialsView'), mfaView = document.querySelector('#mfaView'), loginForm = document.querySelector('#loginForm'), loginButton = document.querySelector('#loginButton'), loginError = document.querySelector('#loginError'), mfaType = document.querySelector('#mfaType'), mfaCode = document.querySelector('#mfaCode'), requestMfaButton = document.querySelector('#requestMfaButton'), verifyMfaButton = document.querySelector('#verifyMfaButton'), backLoginButton = document.querySelector('#backLoginButton'), mfaInfo = document.querySelector('#mfaInfo'), mfaError = document.querySelector('#mfaError'), logoutButton = document.querySelector('#logoutButton'), refreshButton = document.querySelector('#refreshButton'), refreshMainButton = document.querySelector('#refreshMainButton'), cameraSummary = document.querySelector('#cameraSummary'), recordingsModal = document.querySelector('#recordingsModal'), closeRecordingsButton = document.querySelector('#closeRecordingsButton'), refreshRecordingsButton = document.querySelector('#refreshRecordingsButton'), recordingsTitle = document.querySelector('#recordingsTitle'), recordingsSubtitle = document.querySelector('#recordingsSubtitle'), recordingsStatus = document.querySelector('#recordingsStatus'), recordingDays = document.querySelector('#recordingDays'), timelineCard = document.querySelector('#timelineCard'), timelineLoading = document.querySelector('#timelineLoading'), timelineDate = document.querySelector('#timelineDate'), timelineSummary = document.querySelector('#timelineSummary'), timelineTrack = document.querySelector('#timelineTrack'), timelineSegmentList = document.querySelector('#timelineSegmentList'), recordingSelection = document.querySelector('#recordingSelection'), recordingPlayerWrap = document.querySelector('#recordingPlayerWrap'), recordingPlayer = document.querySelector('#recordingPlayer');
+    let appUser = {user: 'local', role: 'admin'}; const isAdmin = () => true;
+    const STEP_VALUES = {small: 5, medium: 10, large: 20};
+    function esc(value) { return String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+    function methodName(value) { return Number(value) === 1 ? 'Tapo app notification' : 'Email'; }
+    async function api(path, options = {}) { const opts = {credentials: 'same-origin', ...options}; if ((opts.method || 'GET').toUpperCase() === 'POST') { opts.headers = {'Content-Type': 'application/json', ...(opts.headers || {})}; if (opts.body === undefined) opts.body = '{}'; } const response = await fetch(path, opts); let data = {}; try { data = await response.json(); } catch (_) {} if (response.status === 401 && data.app_auth === false) { location.replace('/login'); throw new Error('EC-Cam session ended.'); } if (!response.ok) throw new Error(localizeServerMessage(translateError(data.error)) || `HTTP error ${response.status}`); return data; }
+    function translateError(message) { const map = {'login required': 'login required', 'email and password are required': 'Enter your email and password.', 'no pending MFA login': 'No verification pending; sign in again.', 'request the MFA code first': 'Request the code first.', 'MFA method is not available': 'That verification method is not available.', 'invalid camera': 'Invalid camera.', 'camera did not provide a video frame': 'The camera did not send video.'}; return map[message] || message; }
+    function setState(text, tone = '') { state.textContent = text; state.className = tone; }
+    function showLogin() { loginView.classList.remove('hidden'); appView.classList.add('hidden'); logoutButton.classList.add('hidden'); refreshButton.classList.add('hidden'); setState('Tapo not connected', 'bad'); grid.innerHTML = ''; closeRecordings?.(); }
+    function showCredentials() { credentialsView.classList.remove('hidden'); mfaView.classList.add('hidden'); loginError.textContent = ''; mfaError.textContent = ''; mfaInfo.textContent = ''; }
+    function showMfa(types) { const valid = (types || []).map(Number).filter(value => value === 1 || value === 2); mfaType.innerHTML = valid.map(value => `<option value="${value}">${methodName(value)}</option>`).join(''); credentialsView.classList.add('hidden'); mfaView.classList.remove('hidden'); mfaCode.value = ''; verifyMfaButton.disabled = true; mfaInfo.textContent = 'Choose a method and request verification.'; mfaError.textContent = ''; }
+    function showApp() { loginView.classList.add('hidden'); appView.classList.remove('hidden'); logoutButton.classList.toggle('hidden', !isAdmin()); refreshButton.classList.remove('hidden'); }
+    function statusBadge(camera) { if (camera.privacy === true) return '<div class="badge-row"><span class="badge privacy">Privacy</span></div>'; return '<div class="badge-row"><span class="badge">Live</span></div>'; }
+    function previewMarkup(camera) { if (camera.privacy === true) return '<div class="privacy-overlay"><strong>Privacy mode on</strong><span>Video and audio paused</span></div>'; return `<video class="live-native-video" muted playsinline preload="none" aria-label="Live ${esc(camera.name)}"></video><audio class="live-audio" preload="none"></audio><div class="audio-controls"><input class="audio-volume" type="range" min="0" max="1" step="0.05" value="1" aria-label="Audio volume"><button class="audio-toggle" type="button" aria-pressed="false">🔈 Enable audio</button></div><div class="preview-status loading">Connecting to the camera…</div><div class="preview-status error hidden">Video unavailable <button class="retry-button" type="button">Retry</button></div>`; }
+    function ptzMarkup(camera) { if (camera.ptz !== true) return `<span class="meta movement-unavailable">${esc(camera.ptz_error ? 'Movement unavailable.' : 'This camera cannot move.')}</span>`; const disabled = camera.privacy === true ? 'disabled' : ''; const panelId = `movement-${esc(camera.id)}`; return `<div class="movement-control"><button class="movement-toggle secondary" type="button" aria-expanded="false" aria-controls="${panelId}">✥ Move</button><div id="${panelId}" class="movement-panel hidden"><div class="ptz-toolbar"><span class="meta">Step</span><select class="step-select" aria-label="Movement step"><option value="small">5°</option><option value="medium" selected>10°</option><option value="large">20°</option></select></div><div class="ptz" aria-label="Movement controls"><span></span><button class="ptz-button up" data-x="0" data-y="1" ${disabled} title="Up" aria-label="Up">▲</button><span></span><button class="ptz-button left" data-x="-1" data-y="0" ${disabled} title="Left" aria-label="Left">◀</button><button class="ptz-button center" data-x="0" data-y="0" disabled title="Current position" aria-label="Current position">•</button><button class="ptz-button right" data-x="1" data-y="0" ${disabled} title="Right" aria-label="Right">▶</button><span></span><button class="ptz-button down" data-x="0" data-y="-1" ${disabled} title="Down" aria-label="Down">▼</button><span></span></div><div class="meta ptz-result" aria-live="polite">Ready · step 10°</div></div></div>`; }
+    function cardMarkup(camera) { const privacyText = camera.privacy === true ? 'Privacy on.' : (camera.privacy === false ? 'Privacy off.' : 'Privacy status unavailable.'); const privacyClass = camera.privacy === true ? ' privacy-on' : ''; const privacyDisabled = camera.privacy === null ? 'disabled' : ''; const privacyHidden = isAdmin() ? '' : ' hidden'; return `<article class="card" data-id="${esc(camera.id)}" data-name="${esc(camera.name)}"><div class="preview" tabindex="0" role="button" aria-label="Open ${esc(camera.name)} in full screen">${statusBadge(camera)}${previewMarkup(camera)}</div><div class="card-body"><div class="card-heading"><div><h3 class="name">${esc(camera.name)}</h3><div class="meta">${esc(camera.model || 'Camera')} · via Tapo cloud</div></div></div><div class="meta result" aria-live="polite">Ready</div><div class="meta privacy-result${privacyClass}" aria-live="polite">${esc(privacyText)}</div><div class="actions"><button class="relay-button" type="button" data-id="${esc(camera.id)}">Test connection</button><button class="secondary privacy-button${privacyHidden}" type="button" data-id="${esc(camera.id)}" data-enabled="${camera.privacy !== true}" ${privacyDisabled}>${camera.privacy === true ? 'Turn privacy off' : 'Turn privacy on'}</button><button class="secondary fullscreen-button" type="button">⛶ Full screen</button><button class="secondary recordings-button" type="button" data-id="${esc(camera.id)}" data-name="${esc(camera.name)}">▶ Recordings</button>${ptzMarkup(camera)}</div></div><button class="commands-handle" type="button" aria-expanded="false">Controls</button></article>`; }
+    // ---------- EC-Cam: administrador de video ligero ----------
+    // - Solo transmite las cámaras visibles en pantalla.
+    // - Con HTTP/1.1 (abriendo la PC servidor directo) el navegador solo abre 6
+    //   conexiones; se limita a 4 en vivo para no atorar las demás.
+    // - Pausa todo si la app está en segundo plano.
+    // - Mosaico en SD (ligero); pantalla completa en HD.
+    // - Vigila congelados y se mantiene cerca del "en vivo".
+    const liveVideo = (() => {
+      const nav = (performance.getEntriesByType && performance.getEntriesByType('navigation')[0]) || {};
+      const multiplexed = /^h[23]/i.test(nav.nextHopProtocol || '');
+      const maxLive = multiplexed ? 12 : 4;
+      const entries = new Map();
+      let pinned = [];
+      let timer = null;
+      let gridQuality = 'hd';
+      try { gridQuality = localStorage.getItem('eccam_quality2') === 'sd' ? 'sd' : 'hd'; } catch (_) {}
+      const observer = 'IntersectionObserver' in window ? new IntersectionObserver(items => {
+        items.forEach(item => { const entry = entries.get(item.target); if (entry) entry.visible = item.isIntersecting; });
+        schedule();
+      }, {threshold: 0.15}) : null;
+      function schedule() { clearTimeout(timer); timer = setTimeout(refresh, 120); }
+      function fullscreenCard() { return fullscreenElement() || document.querySelector('.card.is-fullscreen'); }
+      function streamUrl(entry, quality) { return `/stream/${encodeURIComponent(entry.card.dataset.id)}.mp4?q=${quality}&t=${Date.now()}`; }
+      function setOverlay(entry, state, text) {
+        entry.loading.classList.toggle('hidden', state !== 'loading');
+        entry.error.classList.toggle('hidden', state !== 'error');
+        entry.paused.classList.toggle('hidden', state !== 'paused');
+        if (state === 'loading' && text) entry.loading.textContent = text;
+        if (state === 'error' && text) entry.errorText.textContent = text;
+      }
+      function start(entry, quality) {
+        clearTimeout(entry.retryTimer); entry.retryTimer = null;
+        entry.quality = quality; entry.running = true; entry.played = false;
+        entry.lastTime = -1; entry.lastProgress = Date.now();
+        entry.video.src = streamUrl(entry, quality);
+        setOverlay(entry, 'loading', quality === 'hd' ? 'Connecting in HD…' : 'Connecting to the camera…');
+        const playback = entry.video.play(); if (playback) playback.catch(() => {});
+      }
+      function stop(entry) {
+        clearTimeout(entry.retryTimer); entry.retryTimer = null;
+        entry.running = false;
+        entry.video.pause(); entry.video.removeAttribute('src'); entry.video.load();
+      }
+      function restart(entry, reason) {
+        if (!entry.running && entry.retryTimer) return;
+        const quality = entry.quality || entry.wantedQuality;
+        stop(entry);
+        let delay = Math.min(1000 * (2 ** entry.attempts), 10000);
+        entry.attempts = Math.min(entry.attempts + 1, 4);
+        setOverlay(entry, 'error', reason);
+        const schedule = ms => { clearTimeout(entry.retryTimer); entry.retryTimer = setTimeout(() => { entry.retryTimer = null; if (entry.wanted) start(entry, entry.wantedQuality); }, ms); };
+        schedule(delay);
+        // Preguntar al servidor el motivo: si la cámara está desconectada o no
+        // manda video, avisarlo claro y esperar más antes de reintentar.
+        fetch(`/api/app/stream-status?cam=${encodeURIComponent(entry.card.dataset.id)}&q=${quality}`, {credentials: 'same-origin'})
+          .then(r => r.json()).then(status => {
+            if (!entry.retryTimer) return;
+            if (status.kind === 'offline') { setOverlay(entry, 'error', 'Camera offline (according to Tapo). Retrying in 1 min.'); schedule(60000); }
+            else if (status.kind === 'playback') { setOverlay(entry, 'error', 'The camera is playing back a recording…'); schedule(8000); }
+            else if (status.kind === 'silent') { setOverlay(entry, 'error', 'The camera is not sending video. Retrying in 30 s.'); schedule(30000); }
+          }).catch(() => {});
+      }
+      function refresh() {
+        clearTimeout(timer);
+        for (const [card, entry] of entries) { if (!card.isConnected || !entry.video.isConnected) { stop(entry); observer?.unobserve(card); entries.delete(card); } }
+        pinned = pinned.filter(card => entries.has(card));
+        const fs = fullscreenCard();
+        let want = [];
+        // Con la ventana de Grabaciones abierta no se transmite en vivo: la
+        // cámara no puede dar en vivo y grabación a la vez.
+        const recordingsOpen = !recordingsModal.classList.contains('hidden');
+        if (!document.hidden && !recordingsOpen) {
+          if (fs) want = entries.has(fs) ? [fs] : [];
+          else {
+            const visible = [...entries.values()].filter(entry => entry.visible).map(entry => entry.card);
+            const ordered = [...pinned.filter(card => visible.includes(card)), ...visible.filter(card => !pinned.includes(card))];
+            want = ordered.slice(0, maxLive);
+          }
+        }
+        for (const entry of entries.values()) {
+          const wanted = want.includes(entry.card), quality = entry.card === fs ? 'hd' : gridQuality;
+          entry.wanted = wanted; entry.wantedQuality = quality;
+          if (wanted && (!entry.running || entry.quality !== quality) && !entry.retryTimer) start(entry, quality);
+          else if (!wanted && (entry.running || entry.retryTimer)) stop(entry);
+          if (!wanted) setOverlay(entry, entry.visible && !document.hidden && !fs ? 'paused' : 'none');
+        }
+      }
+      function watchdog() {
+        const now = Date.now();
+        for (const entry of entries.values()) {
+          const video = entry.video;
+          if (!entry.running) continue;
+          if (video.currentTime > entry.lastTime + 0.05) { entry.lastTime = video.currentTime; entry.lastProgress = now; }
+          else if (now - entry.lastProgress > (entry.played ? 9000 : 25000)) { restart(entry, 'Video frozen. Reconnecting…'); continue; }
+          if (video.buffered.length) {
+            const behind = video.buffered.end(video.buffered.length - 1) - video.currentTime;
+            if (behind > 3) video.currentTime = video.buffered.end(video.buffered.length - 1) - 0.4;
+            else video.playbackRate = behind > 1.2 ? 1.08 : 1;
+          }
+          if (video.paused && entry.played && !document.hidden) { const playback = video.play(); if (playback) playback.catch(() => {}); }
+        }
+        if ([...entries.keys()].some(card => !card.isConnected)) refresh();
+      }
+      setInterval(watchdog, 2000);
+      new MutationObserver(schedule).observe(recordingsModal, {attributes: true, attributeFilter: ['class']});
+      document.addEventListener('visibilitychange', refresh);
+      document.addEventListener('fullscreenchange', schedule); document.addEventListener('webkitfullscreenchange', schedule);
+      window.addEventListener('online', refresh);
+      function register(card, video, preview) {
+        const old = entries.get(card); if (old) { stop(old); observer?.unobserve(card); }
+        const entry = {card, video, visible: !observer, running: false, wanted: false, quality: '', wantedQuality: gridQuality, attempts: 0, retryTimer: null, lastTime: -1, lastProgress: 0, played: false,
+          loading: preview.querySelector('.preview-status.loading'), error: preview.querySelector('.preview-status.error'), paused: document.createElement('button')};
+        entry.errorText = entry.error.firstChild;
+        entry.paused.type = 'button'; entry.paused.className = 'preview-status paused hidden'; entry.paused.textContent = '▶ Paused · click to watch live';
+        preview.appendChild(entry.paused);
+        entry.paused.addEventListener('click', event => { event.stopPropagation(); pinned = [card, ...pinned.filter(item => item !== card)].slice(0, maxLive); refresh(); });
+        const ready = () => { entry.played = true; entry.attempts = 0; entry.lastProgress = Date.now(); setOverlay(entry, 'none'); };
+        video.addEventListener('playing', ready);
+        video.addEventListener('error', () => { if (entry.running) restart(entry, 'Video interrupted. Reconnecting…'); });
+        video.addEventListener('ended', () => { if (entry.running) restart(entry, 'Video interrupted. Reconnecting…'); });
+        entry.error.querySelector('.retry-button')?.addEventListener('click', event => { event.stopPropagation(); entry.attempts = 0; clearTimeout(entry.retryTimer); entry.retryTimer = null; if (entry.wanted) start(entry, entry.wantedQuality); else refresh(); });
+        entries.set(card, entry);
+        observer?.observe(card);
+        schedule();
+        return entry;
+      }
+      function setGridQuality(value) { gridQuality = value === 'hd' ? 'hd' : 'sd'; try { localStorage.setItem('eccam_quality2', gridQuality); } catch (_) {} refresh(); }
+      return {register, refresh, setGridQuality, quality: () => gridQuality, qualityOf: card => entries.get(card)?.quality || gridQuality, maxLive};
+    })();
+    function bindStream(card) {
+      const preview = card.querySelector('.preview'), video = preview.querySelector('.live-native-video'), audio = preview.querySelector('.live-audio'), audioControls = preview.querySelector('.audio-controls'), audioButton = preview.querySelector('.audio-toggle'), volume = preview.querySelector('.audio-volume');
+      if (!video) return;
+      video.removeAttribute('src'); video.removeAttribute('autoplay'); video.load();
+      liveVideo.register(card, video, preview);
+      if (audio && audioButton && audioControls && volume) { audio.volume = Number(volume.value); const stopAudio = () => { audio.pause(); audio.removeAttribute('src'); audio.load(); audioButton.dataset.audioOn = 'false'; audioButton.setAttribute('aria-pressed', 'false'); audioButton.classList.remove('active'); audioControls.classList.remove('active'); audioButton.disabled = false; audioButton.textContent = '🔈 Enable audio'; }; const startAudio = () => { audioButton.disabled = true; audioButton.textContent = 'Connecting audio…'; audio.volume = Number(volume.value); audio.src = `/audio/${encodeURIComponent(card.dataset.id)}.mp3?q=${liveVideo.qualityOf(card)}&stream=${Date.now()}`; audio.load(); const playback = audio.play(); if (playback) playback.catch(() => { stopAudio(); }); }; audioButton.addEventListener('click', event => { event.stopPropagation(); if (audioButton.dataset.audioOn === 'true') stopAudio(); else startAudio(); }); volume.addEventListener('click', event => event.stopPropagation()); volume.addEventListener('input', () => { audio.volume = Number(volume.value); }); audio.addEventListener('playing', () => { audioButton.disabled = false; audioButton.dataset.audioOn = 'true'; audioButton.setAttribute('aria-pressed', 'true'); audioButton.classList.add('active'); audioButton.textContent = '🔇 Mute'; }); audio.addEventListener('error', () => { if (audioButton.dataset.audioOn !== 'true') stopAudio(); }); }
+    }
+    document.addEventListener('click', event => { const button = event.target.closest('.audio-toggle'); if (!button) return; const controls = button.closest('.audio-controls'); if (!controls) return; controls.classList.toggle('active', button.dataset.audioOn !== 'true'); }, true);
+    const recordingsState = {id: null, name: '', dates: [], date: '', preparedClipKey: '', preparedVideoUrl: ''};
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    function displayDate(value) { const text = String(value || ''); if (!/^\d{8}$/.test(text)) return text; return `${text.slice(6, 8)} ${monthNames[Number(text.slice(4, 6)) - 1] || ''} ${text.slice(0, 4)}`; }
+    function displayTime(value) { const text = String(value || ''); const match = text.match(/T(\d{2}:\d{2}(?::\d{2})?)/); return match ? match[1] : 'Unknown time'; }
+    function recordingType(value) { return Number(value) === 1 ? 'Continuous recording' : 'Motion / event'; }
+    function renderRecordingDays(data) { recordingsState.dates = Array.isArray(data.dates) ? data.dates.slice().sort() : []; recordingDays.innerHTML = recordingsState.dates.length ? recordingsState.dates.map(date => `<button class="recording-day${date === recordingsState.date ? ' active' : ''}" type="button" data-date="${esc(date)}">${esc(displayDate(date))}<small>View timeline</small></button>`).join('') : '<div class="empty-state">No recordings in these days.</div>'; recordingDays.querySelectorAll('.recording-day').forEach(button => button.addEventListener('click', () => loadRecordingsDay(button.dataset.date))); }
+    function recordingClipKey(clip) { return `${Number(clip.start)}:${Number(clip.end)}`; }
+    function downloadPreparedRecording(clip, videoUrl) {
+      const anchor = document.createElement('a');
+      anchor.href = `${videoUrl}?download=1`;
+      anchor.download = `eccam-recording-${recordingsState.date || 'clip'}-${displayTime(clip.start_local).replaceAll(':', '-')}.mp4`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      recordingsStatus.className = 'recordings-status';
+      recordingsStatus.textContent = 'Download started.';
+    }
+    function selectRecording(clip, segment, listItem) {
+      cancelRecordingJob(); recordingPlayer.pause(); recordingPlayer.removeAttribute('src'); recordingPlayer.load();
+      if (recordingsState.preparedClipKey !== recordingClipKey(clip)) {
+        recordingsState.preparedClipKey = '';
+        recordingsState.preparedVideoUrl = '';
+      }
+      timelineTrack.querySelectorAll('.timeline-segment').forEach(item => item.classList.toggle('selected', item === segment));
+      timelineSegmentList.querySelectorAll('.timeline-segment-item').forEach(item => item.classList.toggle('selected', item === listItem));
+      const duration = Math.max(1, Number(clip.duration) || Number(clip.end) - Number(clip.start));
+      recordingSelection.innerHTML = `<span><strong>${esc(displayTime(clip.start_local))} – ${esc(displayTime(clip.end_local))}</strong> · ${esc(recordingType(clip.type))} · ${duration}s</span><div class="recording-actions"><button type="button" class="recording-action play-recording-button">▶ Play</button><button type="button" class="recording-action secondary download-recording-button">⤓ Download</button></div>`;
+      recordingSelection.querySelector('.play-recording-button').addEventListener('click', () => prepareRecording(clip, 'play'));
+      recordingSelection.querySelector('.download-recording-button').addEventListener('click', () => prepareRecording(clip, 'download'));
+    }
+    function renderTimeline(data) {
+      timelineLoading.classList.add('hidden');
+      timelineDate.textContent = `${displayDate(data.date)} · ${data.timezone || 'camera time'}`;
+      const clips = Array.isArray(data.clips) ? data.clips : [];
+      timelineSummary.textContent = `${clips.length} ${clips.length === 1 ? 'segment' : 'segments'}`;
+      timelineTrack.innerHTML = '';
+      timelineSegmentList.innerHTML = '';
+      recordingsState.preparedClipKey = '';
+      recordingsState.preparedVideoUrl = '';
+      recordingPlayer.pause();
+      recordingPlayer.removeAttribute('src');
+      recordingPlayer.load();
+      recordingPlayerWrap.classList.add('hidden');
+      recordingSelection.textContent = 'Choose a segment to see its time and duration.';
+      if (!clips.length) {
+        timelineTrack.innerHTML = '<div class="timeline-empty">No segments on this day.</div>';
+        timelineSegmentList.innerHTML = '<div class="meta">No recorded segments.</div>';
+        timelineCard.classList.remove('hidden');
+        return;
+      }
+      const range = Math.max(1, Number(data.day_end) - Number(data.day_start));
+      clips.forEach((clip, index) => {
+        const start = Math.max(Number(data.day_start), Number(clip.start));
+        const end = Math.min(Number(data.day_end), Number(clip.end));
+        if (end <= start) return;
+        const kind = Number(clip.type) === 1 ? 'continuous' : 'event';
+        const label = `${displayTime(clip.start_local)} – ${displayTime(clip.end_local)} · ${recordingType(clip.type)}`;
+        const segment = document.createElement('button');
+        segment.type = 'button';
+        segment.className = `timeline-segment ${kind}`;
+        segment.style.left = `${((start - Number(data.day_start)) / range) * 100}%`;
+        segment.style.width = `${Math.max(((end - start) / range) * 100, .25)}%`;
+        segment.title = label;
+        segment.dataset.index = String(index);
+        const listItem = document.createElement('button');
+        listItem.type = 'button';
+        listItem.className = `timeline-segment-item ${kind}`;
+        listItem.dataset.start = String(start);
+        listItem.innerHTML = `<strong>${esc(displayTime(clip.start_local))} – ${esc(displayTime(clip.end_local))}</strong><span class="segment-kind">${esc(recordingType(clip.type))}</span><small>${Math.max(1, Number(clip.duration) || end - start)}s</small>`;
+        const select = () => selectRecording(clip, segment, listItem);
+        segment.addEventListener('click', select);
+        listItem.addEventListener('click', select);
+        timelineTrack.appendChild(segment);
+        timelineSegmentList.appendChild(listItem);
+      });
+      [...timelineSegmentList.children]
+        .sort((left, right) => Number(right.dataset.start) - Number(left.dataset.start))
+        .forEach(item => timelineSegmentList.appendChild(item));
+      timelineCard.classList.remove('hidden');
+    }
+    async function prepareRecording(clip, mode) {
+      const isDownload = mode === 'download';
+      const clipKey = recordingClipKey(clip);
+      if (isDownload && recordingsState.preparedClipKey === clipKey && recordingsState.preparedVideoUrl) {
+        downloadPreparedRecording(clip, recordingsState.preparedVideoUrl);
+        return;
+      }
+      if (!isDownload && recordingsState.preparedClipKey === clipKey && recordingsState.preparedVideoUrl) {
+        recordingPlayer.src = recordingsState.preparedVideoUrl;
+        recordingPlayerWrap.classList.remove('hidden');
+        recordingPlayer.load();
+        recordingPlayer.play().catch(() => {});
+        recordingsStatus.className = 'recordings-status';
+        recordingsStatus.textContent = 'Recording ready.';
+        return;
+      }
+      const button = recordingSelection.querySelector(isDownload ? '.download-recording-button' : '.play-recording-button');
+      const actionButtons = [...recordingSelection.querySelectorAll('.recording-action')];
+      const end = Number(clip.end);
+      const resetButton = () => {
+        if (!button?.isConnected) return;
+        button.disabled = false;
+        button.classList.remove('is-preparing');
+        button.style.removeProperty('--recording-progress');
+        button.textContent = isDownload ? '⤓ Download' : '▶ Play';
+      };
+      const setProgress = job => {
+        const progress = Math.max(1, Math.min(99, Number(job?.progress) || 1));
+        if (button?.isConnected) {
+          button.style.setProperty('--recording-progress', `${progress}%`);
+          button.textContent = `Preparing… ${progress}%`;
+        }
+        recordingsStatus.className = 'recordings-status loading';
+        recordingsStatus.textContent = `${localizeServerMessage(job?.message) || (isDownload ? 'Preparing download…' : 'Preparing recording…')} ${progress}%`;
+      };
+      actionButtons.forEach(action => { action.disabled = true; });
+      if (button) {
+        button.classList.add('is-preparing');
+        button.style.setProperty('--recording-progress', '1%');
+        button.textContent = 'Preparing… 1%';
+      }
+      recordingsStatus.className = 'recordings-status loading';
+      recordingsStatus.textContent = isDownload ? 'Preparing download… 1%' : 'Preparing recording… 1%';
+      try {
+        const created = await api(`/api/cameras/${encodeURIComponent(recordingsState.id)}/recordings/play`, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({start: Number(clip.start), end})});
+        recordingsState.jobId = created.job_id;
+        if (!isDownload) { recordingPlayer.src = `/recordings/${encodeURIComponent(created.job_id)}/stream.mp4`; recordingPlayerWrap.classList.remove('hidden'); recordingPlayer.load(); recordingPlayer.play().catch(() => {}); }
+        let job;
+        const maxAttempts = Math.max(300, Math.ceil((Math.max(Number(clip.end) - Number(clip.start), 1) + 300) / 0.4));
+        for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+          await new Promise(resolve => setTimeout(resolve, 400));
+          job = await api(`/api/recording-jobs/${encodeURIComponent(created.job_id)}`);
+          if (job.status === 'ready' || job.status === 'error') break;
+          setProgress(job);
+        }
+        if (recordingsState.jobId === created.job_id) recordingsState.jobId = '';
+        if (!job || job.status !== 'ready') throw new Error(job?.error || 'Timed out while preparing the recording.');
+        recordingsState.preparedClipKey = clipKey;
+        recordingsState.preparedVideoUrl = job.video_url;
+        if (isDownload) {
+          downloadPreparedRecording(clip, job.video_url);
+        } else if (recordingPlayer.currentSrc.includes('/stream.mp4') && !recordingPlayer.error && recordingPlayer.currentTime > 0) {
+          // Ya se está viendo mientras descargaba: no reiniciar el video.
+          recordingsStatus.className = 'recordings-status';
+          recordingsStatus.textContent = 'Recording complete. “Download” saves it with audio.';
+        } else {
+          recordingPlayer.src = job.video_url;
+          recordingPlayerWrap.classList.remove('hidden');
+          recordingPlayer.load();
+          recordingsStatus.className = 'recordings-status';
+          recordingsStatus.textContent = 'Recording ready.';
+          recordingPlayer.play().catch(() => {});
+        }
+      } catch (error) {
+        if (error.message === 'cancelled') return; // se cerró Grabaciones o se eligió otro clip
+        recordingsStatus.className = 'recordings-status bad';
+        recordingsState.preparedClipKey = '';
+        recordingsState.preparedVideoUrl = '';
+        recordingsStatus.textContent = localizeServerMessage(error.message) || (isDownload ? 'Could not download the recording.' : 'Could not prepare the recording.');
+      } finally {
+        resetButton();
+        actionButtons.forEach(action => { if (action.isConnected) action.disabled = false; });
+      }
+    }
+    async function loadRecordingsDay(date) { recordingsState.date = date; timelineCard.classList.remove('hidden'); timelineLoading.classList.remove('hidden'); recordingsStatus.className = 'recordings-status loading'; recordingsStatus.textContent = `Loading ${displayDate(date)}…`; recordingDays.querySelectorAll('.recording-day').forEach(button => button.classList.toggle('active', button.dataset.date === date)); try { const data = await api(`/api/cameras/${encodeURIComponent(recordingsState.id)}/recordings?date=${encodeURIComponent(date)}`); renderTimeline(data); recordingsStatus.className = 'recordings-status'; recordingsStatus.textContent = `${data.clips?.length || 0} segments · ${data.timezone || 'camera time'}`; } catch (error) { timelineLoading.classList.add('hidden'); recordingsStatus.className = 'recordings-status bad'; recordingsStatus.textContent = error.message || 'Could not load the recordings.'; } }
+    async function loadRecordingDays() { recordingsStatus.className = 'recordings-status loading'; recordingsStatus.textContent = 'Looking for days with recordings…'; timelineCard.classList.add('hidden'); try { const data = await api(`/api/cameras/${encodeURIComponent(recordingsState.id)}/recordings/dates?days=14`); renderRecordingDays(data); if (recordingsState.dates.length) { const selected = recordingsState.dates.includes(recordingsState.date) ? recordingsState.date : recordingsState.dates[recordingsState.dates.length - 1]; await loadRecordingsDay(selected); } else { recordingsStatus.className = 'recordings-status'; recordingsStatus.textContent = data.sd_available ? 'The SD card is fine but has no recordings.' : 'No SD card detected.'; } } catch (error) { recordingsStatus.className = 'recordings-status bad'; recordingsStatus.textContent = error.message || 'Could not load the recordings.'; } }
+    function openRecordings(id, name) { recordingsState.id = id; recordingsState.name = name; recordingsState.date = ''; recordingsState.preparedClipKey = ''; recordingsState.preparedVideoUrl = ''; recordingsTitle.textContent = `Recordings · ${name}`; recordingsSubtitle.textContent = 'SD card · camera local time'; recordingsModal.classList.remove('hidden'); loadRecordingDays(); closeRecordingsButton.focus(); }
+    function cancelRecordingJob() { const id = recordingsState.jobId; recordingsState.jobId = ''; if (id) fetch(`/api/recording-jobs/${encodeURIComponent(id)}/cancel`, {method: 'POST', credentials: 'same-origin', headers: {'Content-Type': 'application/json'}, body: '{}'}).catch(() => {}); }
+    function closeRecordings() { cancelRecordingJob(); recordingPlayer.pause(); recordingPlayer.removeAttribute('src'); recordingPlayer.load(); recordingPlayerWrap.classList.add('hidden'); recordingsModal.classList.add('hidden'); recordingsState.id = null; recordingsState.preparedClipKey = ''; recordingsState.preparedVideoUrl = ''; timelineCard.classList.add('hidden'); }
+    function bindCard(card) { bindStream(card); card.querySelectorAll('.relay-button').forEach(button => button.addEventListener('click', () => checkRelay(button.dataset.id, button, button.closest('.card').querySelector('.result')))); card.querySelectorAll('.privacy-button').forEach(button => button.addEventListener('click', () => setPrivacy(button.dataset.id, button, button.closest('.card')))); card.querySelectorAll('.fullscreen-button').forEach(button => button.addEventListener('click', () => toggleFullscreen(button.closest('.card')))); card.querySelectorAll('.recordings-button').forEach(button => button.addEventListener('click', () => openRecordings(Number(button.dataset.id), button.dataset.name))); card.querySelectorAll('.preview').forEach(preview => { preview.addEventListener('dblclick', () => toggleFullscreen(preview.closest('.card'))); preview.addEventListener('click', event => { const currentCard = preview.closest('.card'); if (fullscreenElement() === currentCard && currentCard.classList.contains('commands-open') && !event.target.closest('button')) toggleCommands(currentCard, currentCard.querySelector('.commands-handle'), false); }); preview.addEventListener('keydown', event => { if ((event.key === 'Enter' || event.key === ' ') && !event.target.closest('button')) { event.preventDefault(); toggleFullscreen(preview.closest('.card')); } }); }); card.querySelectorAll('.commands-handle').forEach(button => button.addEventListener('click', () => toggleCommands(button.closest('.card'), button))); card.querySelectorAll('.movement-toggle').forEach(button => button.addEventListener('click', () => toggleMovement(button, button.closest('.card')))); card.querySelectorAll('.ptz-button').forEach(button => button.addEventListener('click', () => moveCamera(button, button.closest('.card')))); card.querySelectorAll('.step-select').forEach(select => select.addEventListener('change', () => { const result = select.closest('.card').querySelector('.ptz-result'); result.textContent = `Ready · step ${STEP_VALUES[select.value]}°`; })); }
+    async function refreshCard(card, id) { const data = await api(`/api/cameras/${encodeURIComponent(id)}`); if (!data.camera) throw new Error('No camera state available.'); const holder = document.createElement('div'); holder.innerHTML = cardMarkup(data.camera); const replacement = holder.firstElementChild; if (!replacement) throw new Error('Could not refresh the card.'); card.replaceWith(replacement); bindCard(replacement); return replacement; }
+    // ---------- EC-Cam: visor de una cámara + mosaico sin video ----------
+    // Solo transmite la cámara elegida. El mosaico muestra nombre y la última
+    // imagen vista (foto fija, no video). Flechas, deslizar o teclado para
+    // pasar a la siguiente; la anterior se apaga al cambiar.
+    const viewerCard = document.querySelector('#viewerCard'), viewerName = document.querySelector('#viewerName'), viewerCount = document.querySelector('#viewerCount'), viewerSection = document.querySelector('#viewer');
+    const viewerState = {cameras: [], index: -1, thumbs: new Map()};
+    function savedCamera() { try { return localStorage.getItem('eccam_camera') || ''; } catch (_) { return ''; } }
+    function rememberCamera(id) { try { localStorage.setItem('eccam_camera', String(id)); } catch (_) {} }
+    function tileThumb(camera) {
+      const thumb = viewerState.thumbs.get(String(camera.id));
+      if (camera.privacy === true) return '<span class="tile-thumb">🔒</span>';
+      return thumb ? `<span class="tile-thumb" style="background-image:url('${thumb}')"></span>` : '<span class="tile-thumb"><svg class="cctv-icon" viewBox="0 0 64 48" width="64" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="27" width="6" height="16" rx="1.5"/><path d="M10 35h8l4-7"/><g transform="rotate(18 34 18)"><rect x="16" y="10" width="34" height="16" rx="4"/><path d="M50 8h8v20h-8"/><path d="M12 8h40"/></g><circle cx="47" cy="23" r="2.6" fill="#F07C1E" stroke="none"/></svg></span>';
+    }
+    function renderTiles() {
+      grid.innerHTML = viewerState.cameras.map((camera, index) => `<button class="tile${index === viewerState.index ? ' active' : ''}" type="button" data-index="${index}" aria-label="View ${esc(camera.name)}">${tileThumb(camera)}<span class="tile-name">${esc(camera.name)}</span><span class="tile-meta">${camera.privacy === true ? 'Privacy on' : esc(camera.model || 'Camera')}</span></button>`).join('');
+      grid.querySelectorAll('.tile').forEach(tile => tile.addEventListener('click', () => {
+        selectCamera(Number(tile.dataset.index));
+        const top = viewerSection.getBoundingClientRect().top;
+        if (top < 0 || top > window.innerHeight * 0.5) viewerSection.scrollIntoView({behavior: 'smooth', block: 'start'});
+      }));
+    }
+    function selectCamera(index) {
+      const total = viewerState.cameras.length;
+      if (!total) return;
+      index = ((index % total) + total) % total;
+      if (fullscreenElement()) { try { (document.exitFullscreen || document.webkitExitFullscreen)?.call(document); } catch (_) {} }
+      viewerState.index = index;
+      const camera = viewerState.cameras[index];
+      viewerCard.innerHTML = cardMarkup(camera);
+      const card = viewerCard.firstElementChild;
+      if (card) bindCard(card);
+      liveVideo.refresh();
+      viewerName.textContent = camera.name;
+      viewerCount.textContent = `${index + 1} of ${total}`;
+      grid.querySelectorAll('.tile').forEach(tile => tile.classList.toggle('active', Number(tile.dataset.index) === index));
+      rememberCamera(camera.id);
+    }
+    async function load() {
+      grid.innerHTML = '<div class="empty-state">Loading cameras…</div>'; viewerCard.innerHTML = ''; viewerName.textContent = ''; viewerCount.textContent = '';
+      cameraSummary.textContent = 'Connecting to the Tapo cloud…'; setState('Refreshing…');
+      try {
+        const data = await api('/api/cameras');
+        if (!data.cameras?.length) { grid.innerHTML = '<div class="empty-state">There are no cameras in this account.</div>'; viewerSection.classList.add('hidden'); cameraSummary.textContent = 'No cameras'; setState('No cameras', 'bad'); return; }
+        viewerSection.classList.remove('hidden');
+        viewerState.cameras = data.cameras;
+        const saved = savedCamera();
+        let start = viewerState.cameras.findIndex(camera => String(camera.id) === saved);
+        if (start < 0) start = Math.max(0, viewerState.cameras.findIndex(camera => camera.privacy !== true));
+        viewerState.index = start;
+        renderTiles();
+        selectCamera(start);
+        cameraSummary.textContent = `${data.cameras.length} ${data.cameras.length === 1 ? 'camera' : 'cameras'} · click one to view it`;
+        setState('Online', 'ok');
+      } catch (error) {
+        viewerSection.classList.add('hidden');
+        grid.innerHTML = `<div class="empty-state"><strong>Could not load the cameras</strong><div class="meta">${esc(error.message)}</div><button id="loadRetryButton" type="button">Retry</button></div>`;
+        grid.querySelector('#loadRetryButton')?.addEventListener('click', load);
+        cameraSummary.textContent = 'Connection error';
+        setState(error.message === 'login required' ? 'Tapo not connected' : 'Cloud unavailable', 'bad');
+        if (error.message === 'login required') showLogin();
+      }
+    }
+    document.querySelector('#prevCam').addEventListener('click', () => selectCamera(viewerState.index - 1));
+    document.querySelector('#nextCam').addEventListener('click', () => selectCamera(viewerState.index + 1));
+    document.addEventListener('keydown', event => {
+      if (!recordingsModal.classList.contains('hidden') || event.target.closest('input, select, textarea') || document.querySelector('.app-modal:not(.hidden)')) return;
+      if (event.key === 'ArrowLeft') selectCamera(viewerState.index - 1);
+      if (event.key === 'ArrowRight') selectCamera(viewerState.index + 1);
+    });
+    (() => {
+      let startX = 0, startY = 0, tracking = false;
+      viewerCard.addEventListener('touchstart', event => { if (event.target.closest('button, input, select, .movement-panel')) { tracking = false; return; } const touch = event.touches[0]; startX = touch.clientX; startY = touch.clientY; tracking = true; }, {passive: true});
+      viewerCard.addEventListener('touchend', event => { if (!tracking) return; tracking = false; const touch = event.changedTouches[0], dx = touch.clientX - startX, dy = touch.clientY - startY; if (Math.abs(dx) > 60 && Math.abs(dy) < 50) selectCamera(viewerState.index + (dx < 0 ? 1 : -1)); }, {passive: true});
+    })();
+    // Foto fija para el mosaico: la última imagen vista de cada cámara.
+    const thumbCanvas = document.createElement('canvas');
+    setInterval(() => {
+      const video = viewerCard.querySelector('video'), camera = viewerState.cameras[viewerState.index];
+      if (!video || !camera || video.readyState < 2 || !video.videoWidth) return;
+      thumbCanvas.width = 320; thumbCanvas.height = Math.round(320 * video.videoHeight / video.videoWidth);
+      try {
+        thumbCanvas.getContext('2d').drawImage(video, 0, 0, thumbCanvas.width, thumbCanvas.height);
+        const url = thumbCanvas.toDataURL('image/jpeg', 0.6);
+        viewerState.thumbs.set(String(camera.id), url);
+        const thumb = grid.querySelector(`.tile[data-index="${viewerState.index}"] .tile-thumb`);
+        if (thumb) { thumb.textContent = ''; thumb.style.backgroundImage = `url('${url}')`; }
+      } catch (_) {}
+    }, 5000);
+    function fullscreenElement() { return document.fullscreenElement || document.webkitFullscreenElement || null; }
+    function updateFullscreenButtons() { const active = fullscreenElement(); document.querySelectorAll('.card').forEach(card => { const activeCard = card === active; card.classList.toggle('is-fullscreen', activeCard); if (!activeCard) { card.classList.remove('commands-open'); const handle = card.querySelector('.commands-handle'); if (handle) { handle.setAttribute('aria-expanded', 'false'); handle.textContent = 'Controls'; } } if (card.classList.contains('movement-open')) positionMovementPanel(card); }); document.querySelectorAll('.fullscreen-button').forEach(button => { button.textContent = button.closest('.card') === active ? '⛶ Exit full screen' : '⛶ Full screen'; }); }
+    function positionMovementPanel(card) { const panel = card.querySelector('.movement-panel'), control = card.querySelector('.movement-control'); if (!panel || !control) return; panel.classList.remove('opens-up', 'detached'); if (panel.classList.contains('hidden') || fullscreenElement() === card || card.classList.contains('is-fullscreen')) return; const controlRect = control.getBoundingClientRect(), panelRect = panel.getBoundingClientRect(), padding = 16, gap = 10; const fitsBelow = panelRect.height <= window.innerHeight - controlRect.bottom - gap - padding; const fitsAbove = panelRect.height <= controlRect.top - gap - padding; if (!fitsBelow && fitsAbove) panel.classList.add('opens-up'); else if (!fitsBelow) panel.classList.add('detached'); }
+    function repositionOpenMovementPanels() { document.querySelectorAll('.card.movement-open').forEach(positionMovementPanel); }
+    function toggleMovement(button, card, force) { const panel = card.querySelector('.movement-panel'); if (!panel) return; const open = force ?? panel.classList.contains('hidden'); panel.classList.toggle('hidden', !open); card.classList.toggle('movement-open', open); button.setAttribute('aria-expanded', String(open)); positionMovementPanel(card); }
+    function toggleCommands(card, button, force) { const open = force ?? !card.classList.contains('commands-open'); card.classList.toggle('commands-open', open); button.setAttribute('aria-expanded', String(open)); button.textContent = open ? 'Close controls' : 'Controls'; }
+    async function toggleFullscreen(card) { try { if (fullscreenElement() === card || card.classList.contains('is-fullscreen')) { card.classList.remove('is-fullscreen'); if (document.exitFullscreen) await document.exitFullscreen(); else if (document.webkitExitFullscreen) document.webkitExitFullscreen(); } else { if (fullscreenElement()) { if (document.exitFullscreen) await document.exitFullscreen(); else if (document.webkitExitFullscreen) document.webkitExitFullscreen(); } card.classList.add('is-fullscreen'); const request = card.requestFullscreen || card.webkitRequestFullscreen; if (!request) throw new Error('This browser does not support full screen'); await request.call(card); } } catch (error) { card.classList.remove('is-fullscreen'); const result = card.querySelector('.result'); result.textContent = error.message; result.className = 'meta bad result'; } finally { updateFullscreenButtons(); } }
+    document.addEventListener('fullscreenchange', updateFullscreenButtons); document.addEventListener('webkitfullscreenchange', updateFullscreenButtons);
+    window.addEventListener('pagehide', () => cancelRecordingJob());
+    window.addEventListener('resize', repositionOpenMovementPanels); window.addEventListener('scroll', repositionOpenMovementPanels, true);
+    async function checkRelay(id, button, result) { button.disabled = true; result.textContent = 'Testing connection…'; result.className = 'meta'; try { const data = await api(`/api/cameras/${encodeURIComponent(id)}/relay-check`); result.textContent = data.ok ? 'Cloud connection OK.' : (data.error || 'No cloud connection'); result.className = `meta ${data.ok ? 'ok' : 'bad'}`; } catch (error) { result.textContent = error.message; result.className = 'meta bad'; } finally { button.disabled = false; } }
+    async function setPrivacy(id, button, card) { if (card.dataset.privacyBusy === 'true') return; const enabled = button.dataset.enabled === 'true', result = card.querySelector('.privacy-result'), previousText = button.textContent, controller = new AbortController(); let timedOut = false; card.dataset.privacyBusy = 'true'; button.disabled = true; button.setAttribute('aria-busy', 'true'); button.textContent = enabled ? 'Turning on…' : 'Turning off…'; result.textContent = enabled ? 'Turning privacy on…' : 'Turning privacy off…'; result.className = 'meta'; const timeout = setTimeout(() => { timedOut = true; controller.abort(); }, 15000); try { const data = await api(`/api/cameras/${encodeURIComponent(id)}/privacy`, {method: 'POST', signal: controller.signal, headers: {'Content-Type': 'application/json'}, body: JSON.stringify({enabled})}); if (typeof data.privacy !== 'boolean') throw new Error('The camera returned an invalid state.'); const isOn = data.privacy; const preview = card.querySelector('.preview'); if (!preview) throw new Error('Preview unavailable.'); preview.innerHTML = `${statusBadge({privacy: isOn})}${previewMarkup({id, name: card.dataset.name, privacy: isOn})}`; bindStream(card); card.querySelectorAll('.ptz-button').forEach(control => { if (control.dataset.x !== '0' || control.dataset.y !== '0') control.disabled = isOn; }); button.dataset.enabled = String(!isOn); button.textContent = isOn ? 'Turn privacy off' : 'Turn privacy on'; result.textContent = isOn ? 'Privacy on: video and audio paused.' : 'Privacy off.'; result.className = `meta ${isOn ? 'privacy-on' : 'ok'}`; try { await refreshCard(card, id); } catch (_) { /* The local state is already updated; keep the card usable if refresh fails. */ } } catch (error) { button.textContent = previousText; result.textContent = timedOut ? 'The camera took too long. Try again.' : (error.message || 'Could not change privacy.'); result.className = 'meta bad'; } finally { clearTimeout(timeout); card.dataset.privacyBusy = 'false'; button.removeAttribute('aria-busy'); button.disabled = false; } }
+    async function moveCamera(button, card) { const step = STEP_VALUES[card.querySelector('.step-select')?.value || 'medium'], x = Number(button.dataset.x) * step, y = Number(button.dataset.y) * step, result = card.querySelector('.ptz-result'), controls = [...card.querySelectorAll('.ptz-button')]; controls.forEach(control => { if (!control.disabled || control === button) control.disabled = true; }); result.textContent = 'Moving…'; result.className = 'meta ptz-result'; try { await api(`/api/cameras/${encodeURIComponent(card.dataset.id)}/move`, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({x, y})}); result.textContent = `Move sent · ${step}°.`; result.className = 'meta ptz-result ok'; } catch (error) { result.textContent = error.message; result.className = 'meta ptz-result bad'; } finally { const privacyOn = card.querySelector('.privacy-button')?.dataset.enabled === 'false'; controls.forEach(control => { if (control.dataset.x !== '0' || control.dataset.y !== '0') control.disabled = privacyOn; }); } }
+    loginForm.addEventListener('submit', async event => { event.preventDefault(); loginButton.disabled = true; loginError.textContent = 'Connecting to Tapo…'; try { const data = await api('/api/login', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({username: document.querySelector('#username').value, password: document.querySelector('#password').value})}); if (data.mfa_required) showMfa(data.mfa_types); else { showApp(); await load(); } } catch (error) { loginError.textContent = error.message; } finally { loginButton.disabled = false; } });
+    requestMfaButton.addEventListener('click', async () => { requestMfaButton.disabled = true; mfaError.textContent = ''; mfaInfo.textContent = 'Requesting verification…'; try { const data = await api('/api/mfa/request', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({mfa_type: Number(mfaType.value)})}); mfaInfo.textContent = data.mfa_type === 1 ? 'Check the notification in the Tapo app.' : 'Check the code sent to your email.'; verifyMfaButton.disabled = false; mfaCode.focus(); } catch (error) { mfaError.textContent = error.message; } finally { requestMfaButton.disabled = false; } });
+    verifyMfaButton.addEventListener('click', async () => { verifyMfaButton.disabled = true; mfaError.textContent = ''; mfaInfo.textContent = 'Verifying…'; try { await api('/api/mfa/verify', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({code: mfaCode.value})}); showApp(); await load(); } catch (error) { mfaError.textContent = error.message; verifyMfaButton.disabled = false; } });
+    backLoginButton.addEventListener('click', () => { showCredentials(); document.querySelector('#password').value = ''; });
+    async function logout() { if (!confirm('Sign out of Tapo on this PC? You will need to sign in with your Tapo account again to see your cameras.')) return; logoutButton.disabled = true; try { await api('/api/logout', {method: 'POST'}); showCredentials(); showLogin(); } catch (error) { setState(error.message, 'bad'); } finally { logoutButton.disabled = false; } }
+    logoutButton.addEventListener('click', logout); refreshButton.addEventListener('click', load); refreshMainButton.addEventListener('click', load);
+    closeRecordingsButton.addEventListener('click', closeRecordings); refreshRecordingsButton.addEventListener('click', loadRecordingDays); recordingsModal.addEventListener('click', event => { if (event.target === recordingsModal) closeRecordings(); });
+    document.addEventListener('keydown', event => { if (event.key === 'Escape') { if (!recordingsModal.classList.contains('hidden')) { closeRecordings(); return; } const active = fullscreenElement(); if (active?.classList.contains('commands-open')) toggleCommands(active, active.querySelector('.commands-handle'), false); } });
+    // ---------- EC-Cam: inicio ----------
+    // Mensajes que manda el servidor: el motor de Topo los da en inglés y los de
+    // EC-Cam en español; se muestran en el idioma de la página.
+    const SERVER_MESSAGES_ES = {'Starting recording preview…': 'Iniciando la grabación…', 'Connecting to playback relay…': 'Connecting to the camera…', 'Starting camera playback…': 'Pidiendo la grabación a la cámara…', 'Downloading recording…': 'Descargando la grabación…', 'Preparing video…': 'Preparando el video…', 'Converting recording…': 'Convirtiendo la grabación…', 'Recording ready.': 'Recording ready.', 'Recording preparation failed.': 'No se pudo preparar la grabación.'};
+    const SERVER_MESSAGES = {"Pausando el video en vivo…": "Pausing live video…", "La cámara está ocupada; reintentando…": "The camera is busy; retrying…", "Solicitud rechazada.": "Request rejected.", "No disponible en EC-Cam.": "Not available in EC-Cam.", "Conecta la cuenta Tapo primero.": "Connect your Tapo account first.", "Cámara inválida.": "Invalid camera."};
+    function localizeServerMessage(message) {
+      if (!message) return message;
+      const english = document.documentElement.lang === 'en';
+      const map = english ? SERVER_MESSAGES : SERVER_MESSAGES_ES;
+      if (map[message]) return map[message];
+      const firmware = english && String(message).match(/^Esta cámara \(firmware (.+)\) no permite reproducir grabaciones desde EC-Cam todavía/);
+      if (firmware) return `This camera (firmware ${firmware[1]}) cannot play recordings in EC-Cam yet. You can watch them in the Tapo app.`;
+      return message;
+    }
+    const langSelect = document.querySelector('#langSelect');
+    if (langSelect) {
+      langSelect.value = document.documentElement.lang === 'en' ? 'en' : 'es';
+      langSelect.addEventListener('change', () => {
+        document.cookie = `eccam_lang=${langSelect.value}; Path=/; Max-Age=31536000; SameSite=Lax`;
+        try { localStorage.setItem('eccam_lang', langSelect.value); } catch (_) {}
+        location.reload();
+      });
+    }
+    function formatBuildDate(value) { const m = String(value).match(/^(\d{4})-(\d{2})-(\d{2})(?: (\d{2}:\d{2}))?/); if (!m) return value; const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']; return `${Number(m[3])} ${months[Number(m[2]) - 1]} ${m[1]}${m[4] ? ', ' + m[4] : ''}`; }
+    async function checkTapo() { try { const data = await api('/api/session'); if (data.authenticated) { showApp(); await load(); } else if (data.mfa_pending) showMfa(data.mfa_types); else showLogin(); } catch (_) { showLogin(); } }
+    const qualitySelect = document.querySelector('#qualitySelect'); qualitySelect.value = liveVideo.quality(); qualitySelect.addEventListener('change', () => liveVideo.setGridQuality(qualitySelect.value));
+    (async function init() {
+      try {
+        const session = await api('/api/app/session');
+        const versionText = session.version ? `Version ${session.version}${session.build_date ? ' · ' + formatBuildDate(session.build_date) : ''}` : '';
+        const footer = document.querySelector('.app-footer'); if (footer && versionText) footer.insertAdjacentText('afterbegin', `${versionText} · `);
+        const subtitle = document.querySelector('.brand-subtitle'); if (subtitle && versionText) { subtitle.textContent = versionText; subtitle.title = 'Installed EC-Cam version'; }
+      } catch (_) {}
+      await checkTapo();
+    })();
+  </script>
+</body>
+</html>

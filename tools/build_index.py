@@ -1,8 +1,9 @@
-"""Genera web/index.html a partir del index de Topo (web/index.topo.html)."""
+"""Genera src/web/index.html a partir del index de Topo (tools/plantilla/index.topo.html)."""
 from pathlib import Path
-import re, sys
-base = Path(__file__).resolve().parent.parent / "web"
-s = (base / "index.topo.html").read_text(encoding="utf-8")
+import json, re, sys
+REPO = Path(__file__).resolve().parent.parent
+base = REPO / "src" / "web"
+s = (REPO / "tools" / "plantilla" / "index.topo.html").read_text(encoding="utf-8")
 missing = []
 def R(old, new, count=1):
     global s
@@ -42,6 +43,7 @@ R('.ptz button:hover:not(:disabled) { background: var(--accent); color: var(--te
 R('background: rgba(63, 56, 52, .42); }', 'background: rgba(0, 0, 0, .65); }')
 R('.timeline-segment.event:hover:not(:disabled) { background: var(--accent-strong); color: var(--text); }', '.timeline-segment.event:hover:not(:disabled) { background: var(--accent-strong); }')
 R('    @keyframes spin', '''    .header-actions button.icon-only { min-width: 38px; }
+    .lang-select { width: auto; padding: 8px 10px; border-radius: 10px; background: var(--surface-2); font-size: .82rem; cursor: pointer; }
     .preview .audio-controls { top: 12px; bottom: auto; }
     .movement-panel { right: auto; left: 0; }
     .user-chip { color: var(--muted); font-size: .82rem; white-space: nowrap; } .user-chip strong { color: var(--text); }
@@ -63,7 +65,7 @@ R('    @keyframes spin', '''    .header-actions button.icon-only { min-width: 38
 R('''<div class="brand"><img class="brand-icon" src="/assets/topo.png" alt="Topo"><div class="brand-copy"><h1>Topo - desktop app for Tapo camera</h1><div class="brand-subtitle">Cloud control for your cameras</div></div></div>''',
   '''<div class="brand"><img class="brand-icon" src="/img/pwa-192.png" alt=""><div class="brand-copy"><h1>EC-Cam</h1><div class="brand-subtitle">Tus cámaras Tapo en vivo</div></div></div>''')
 R('''<div id="account"><div id="state" aria-live="polite">Login required</div><div class="header-actions"><button id="infoButton" class="ghost" type="button" title="Open the Topo website" aria-label="Open the Topo website">Info</button><button id="refreshButton" class="ghost hidden" type="button" title="Refresh cameras" aria-label="Refresh cameras">↻</button><button id="logoutButton" class="danger hidden" type="button">Log out</button></div></div>''',
-  '''<div id="account"><div id="state" aria-live="polite">Conectando…</div><div class="header-actions"><button class="ghost" type="button" data-instalar style="display:none" title="Instalar «EC-Cam Web» como app con su propia ventana">⤓ Instalar app</button><button id="refreshButton" class="ghost icon-only hidden" type="button" title="Actualizar cámaras" aria-label="Actualizar cámaras">↻</button></div></div>''')
+  '''<div id="account"><div id="state" aria-live="polite">Conectando…</div><div class="header-actions"><select id="langSelect" class="lang-select" title="Idioma / Language" aria-label="Idioma / Language"><option value="es">🌐 ES</option><option value="en">🌐 EN</option></select><button class="ghost" type="button" data-instalar style="display:none" title="Instalar «EC-Cam Web» como app con su propia ventana">⤓ Instalar app</button><button id="refreshButton" class="ghost icon-only hidden" type="button" title="Actualizar cámaras" aria-label="Actualizar cámaras">↻</button></div></div>''')
 
 # ---------- login de Tapo ----------
 R('''<img class="login-brand" src="/assets/topo.png" alt="Topo"><div id="credentialsView"><h2>Log in to Tapo</h2><p>Use your Tapo account credentials. Your password is not saved.</p>''',
@@ -209,7 +211,7 @@ R("async function logout() { logoutButton.disabled = true; try { await api('/api
   "async function logout() { if (!confirm('¿Cerrar la sesión de Tapo en esta PC? Tendrás que volver a entrar con tu cuenta Tapo para ver las cámaras.')) return; logoutButton.disabled = true; try { await api('/api/logout', {method: 'POST'}); showCredentials(); showLogin(); }")
 R("infoButton.addEventListener('click', () => { window.location.href = PROJECT_WEBSITE; }); ", "")
 R("(async function init() { try { const data = await api('/api/session'); if (data.authenticated) { showApp(); await load(); } else if (data.mfa_pending) showMfa(data.mfa_types); else showLogin(); } catch (_) { showLogin(); } })();",
-  (base.parent / "tools" / "index_extra.js").read_text(encoding="utf-8").strip())
+  (REPO / "tools" / "index_extra.js").read_text(encoding="utf-8").strip())
 
 # ---------- EC-Cam: video ligero ----------
 R('<video class="live-native-video" autoplay muted playsinline preload="auto" src="/stream/${encodeURIComponent(camera.id)}.mp4?native=${Date.now()}"',
@@ -219,7 +221,7 @@ end = s.find("    document.addEventListener('click', event => { const button = e
 if start < 0 or end < start:
     missing.append(('bindStream block', 0))
 else:
-    s = s[:start] + (base.parent / "tools" / "stream_client.js").read_text(encoding="utf-8") + s[end:]
+    s = s[:start] + (REPO / "tools" / "stream_client.js").read_text(encoding="utf-8") + s[end:]
 R('<div class="toolbar-actions"><button id="refreshMainButton"',
   '<div class="toolbar-actions"><select id="qualitySelect" class="quality-select" title="Calidad del mosaico" aria-label="Calidad del mosaico"><option value="sd">Mosaico ligero (SD)</option><option value="hd">Mosaico en HD</option></select><button id="refreshMainButton"')
 R('    @keyframes spin', """    .preview-status.paused { cursor: pointer; border-color: var(--accent); background: rgba(18, 22, 20, .88); color: var(--text); font-weight: 600; }
@@ -237,7 +239,7 @@ load_end = s.find('\n', load_start)
 if load_start < 0:
     missing.append(('load()', 0))
 else:
-    s = s[:load_start] + (base.parent / "tools" / "viewer.js").read_text(encoding="utf-8").rstrip('\n') + s[load_end:]
+    s = s[:load_start] + (REPO / "tools" / "viewer.js").read_text(encoding="utf-8").rstrip('\n') + s[load_end:]
 R('<option value="sd">Mosaico ligero (SD)</option><option value="hd">Mosaico en HD</option>', '<option value="hd">Calidad HD</option><option value="sd">Calidad ligera (SD)</option>')
 R('title="Calidad del mosaico" aria-label="Calidad del mosaico"', 'title="Calidad del video" aria-label="Calidad del video"')
 R('    @keyframes spin', """    .viewer { width: min(1100px, 100%); margin: 0 auto 28px; }
@@ -305,7 +307,26 @@ R("function closeRecordings() {", "function cancelRecordingJob() { const id = re
 R("function selectRecording(clip, segment, listItem) {", "function selectRecording(clip, segment, listItem) {\n      cancelRecordingJob(); recordingPlayer.pause(); recordingPlayer.removeAttribute('src'); recordingPlayer.load();")
 R("    window.addEventListener('resize', repositionOpenMovementPanels);", "    window.addEventListener('pagehide', () => cancelRecordingJob());\n    window.addEventListener('resize', repositionOpenMovementPanels);")
 
+# ---------- EC-Cam: mensajes del servidor en el idioma elegido ----------
+R("if (!response.ok) throw new Error(translateError(data.error) || `Error HTTP ${response.status}`);",
+  "if (!response.ok) throw new Error(localizeServerMessage(translateError(data.error)) || `Error HTTP ${response.status}`);")
+R("${job?.message || (isDownload ? 'Preparando descarga…' : 'Preparando grabación…')}", "${localizeServerMessage(job?.message) || (isDownload ? 'Preparando descarga…' : 'Preparando grabación…')}")
+R("recordingsStatus.textContent = error.message || (isDownload ? 'No se pudo descargar la grabación.' : 'No se pudo preparar la grabación.');",
+  "recordingsStatus.textContent = localizeServerMessage(error.message) || (isDownload ? 'No se pudo descargar la grabación.' : 'No se pudo preparar la grabación.');")
+
 if missing:
     print("NO ENCONTRADOS:"); [print(" ", m) for m in missing]; sys.exit(1)
 (base / "index.html").write_text(s, encoding="utf-8")
-print("web/index.html generado")
+print("src/web/index.html generado (español)")
+
+# ---------- versión en inglés ----------
+import sys
+sys.path.insert(0, str(REPO / "tools"))
+from i18n_en import SERVER_MESSAGES_EN, spanish_leftovers, to_english  # noqa: E402
+
+english = to_english(s).replace("const SERVER_MESSAGES = {};", "const SERVER_MESSAGES = " + json.dumps(SERVER_MESSAGES_EN, ensure_ascii=False) + ";")
+(base / "index.en.html").write_text(english, encoding="utf-8")
+leftovers = spanish_leftovers(english)
+print(f"src/web/index.en.html generado (inglés); textos que parecen español: {len(leftovers)}")
+for item in leftovers:
+    print("  ·", item)

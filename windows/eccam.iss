@@ -21,7 +21,7 @@ DefaultGroupName=EC-Cam
 DisableProgramGroupPage=yes
 PrivilegesRequired=lowest
 OutputBaseFilename=EC-Cam-Setup-{#AppVersion}
-SetupIconFile=..\web\img\eccam.ico
+SetupIconFile=..\src\web\img\eccam.ico
 UninstallDisplayIcon={app}\eccam-server.exe
 Compression=lzma2
 SolidCompression=yes
@@ -34,10 +34,31 @@ RestartApplications=no
 
 [Languages]
 Name: "es"; MessagesFile: "compiler:Languages\Spanish.isl"
+Name: "en"; MessagesFile: "compiler:Default.isl"
+
+[CustomMessages]
+es.TaskAutostart=Iniciar el servicio EC-Cam al encender Windows (recomendado)
+en.TaskAutostart=Start the EC-Cam service when Windows starts (recommended)
+es.GroupService=Servicio:
+en.GroupService=Service:
+es.TaskDesktop=Crear acceso directo «EC-Cam» en el escritorio
+en.TaskDesktop=Create an "EC-Cam" desktop shortcut
+es.GroupShortcuts=Accesos directos:
+en.GroupShortcuts=Shortcuts:
+es.IconStart=Iniciar EC-Cam
+en.IconStart=Start EC-Cam
+es.IconStartComment=Inicia el servicio EC-Cam y abre tus cámaras
+en.IconStartComment=Starts the EC-Cam service and opens your cameras
+es.IconStop=Detener servicio EC-Cam
+en.IconStop=Stop EC-Cam service
+es.IconData=Carpeta de datos de EC-Cam
+en.IconData=EC-Cam data folder
+es.IconUninstall=Desinstalar EC-Cam
+en.IconUninstall=Uninstall EC-Cam
 
 [Tasks]
-Name: "autostart"; Description: "Iniciar el servidor EC-Cam al encender Windows (recomendado)"; GroupDescription: "Servidor:"
-Name: "desktopicon"; Description: "Crear acceso directo en el escritorio"; GroupDescription: "Accesos directos:"
+Name: "autostart"; Description: "{cm:TaskAutostart}"; GroupDescription: "{cm:GroupService}"
+Name: "desktopicon"; Description: "{cm:TaskDesktop}"; GroupDescription: "{cm:GroupShortcuts}"
 
 [Files]
 Source: "{#SourceDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
@@ -45,12 +66,14 @@ Source: "{#SourceDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs 
 [InstallDelete]
 ; El acceso del escritorio se llamaba "Iniciar EC-Cam" (1.1.3 a 1.1.10); ahora es "EC-Cam".
 Type: files; Name: "{userdesktop}\Iniciar EC-Cam.lnk"
+; Los accesos del menú Inicio cambian de nombre según el idioma: limpiar los anteriores.
+Type: files; Name: "{group}\*.lnk"
 
 [Icons]
-Name: "{group}\Iniciar EC-Cam"; Filename: "{app}\eccam-server.exe"; Comment: "Inicia el servicio EC-Cam y abre tus cámaras"
-Name: "{group}\Detener servicio EC-Cam"; Filename: "{sys}\taskkill.exe"; Parameters: "/IM eccam-server.exe /F"; IconFilename: "{app}\eccam-server.exe"
-Name: "{group}\Carpeta de datos de EC-Cam"; Filename: "{localappdata}\EC-Cam"
-Name: "{group}\Desinstalar EC-Cam"; Filename: "{uninstallexe}"
+Name: "{group}\{cm:IconStart}"; Filename: "{app}\eccam-server.exe"; Comment: "{cm:IconStartComment}"
+Name: "{group}\{cm:IconStop}"; Filename: "{sys}\taskkill.exe"; Parameters: "/IM eccam-server.exe /F"; IconFilename: "{app}\eccam-server.exe"
+Name: "{group}\{cm:IconData}"; Filename: "{localappdata}\EC-Cam"
+Name: "{group}\{cm:IconUninstall}"; Filename: "{uninstallexe}"
 Name: "{userdesktop}\EC-Cam"; Filename: "{app}\eccam-server.exe"; Tasks: desktopicon
 Name: "{userstartup}\Servicio EC-Cam"; Filename: "{app}\eccam-server.exe"; Parameters: "--no-browser"; Tasks: autostart
 
@@ -75,4 +98,10 @@ begin
   { Detener una versión anterior antes de copiar archivos }
   if CurStep = ssInstall then
     Exec(ExpandConstant('{sys}\taskkill.exe'), '/IM eccam-server.exe /F', '', SW_HIDE, ewWaitUntilTerminated, R);
+  { El idioma del instalador es el idioma inicial de la app (luego se cambia en la app) }
+  if CurStep = ssPostInstall then
+  begin
+    ForceDirectories(ExpandConstant('{localappdata}\EC-Cam'));
+    SaveStringToFile(ExpandConstant('{localappdata}\EC-Cam\language.txt'), ActiveLanguage, False);
+  end;
 end;

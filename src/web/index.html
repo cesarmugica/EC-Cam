@@ -117,6 +117,7 @@
     .timeline-loading { display: flex; align-items: center; gap: 9px; margin-bottom: 14px; padding: 12px 14px; border-radius: 10px; background: var(--surface-2); color: var(--muted); font-size: .84rem; } .timeline-loading::before, .recordings-status.loading::before { display: inline-block; width: 13px; height: 13px; flex: 0 0 auto; border: 2px solid var(--border); border-top-color: var(--text); border-radius: 50%; animation: spin .8s linear infinite; content: ''; }
     .recordings-status { display: flex; align-items: center; gap: 8px; min-height: 1.3em; margin: 0 0 14px; color: var(--muted); font-size: .84rem; } .recordings-status.bad { color: var(--text); }
     .header-actions button.icon-only { min-width: 38px; }
+    .lang-select { width: auto; padding: 8px 10px; border-radius: 10px; background: var(--surface-2); font-size: .82rem; cursor: pointer; }
     .preview .audio-controls { top: 12px; bottom: auto; }
     .movement-panel { right: auto; left: 0; }
     .user-chip { color: var(--muted); font-size: .82rem; white-space: nowrap; } .user-chip strong { color: var(--text); }
@@ -171,7 +172,7 @@
 <body>
   <header class="app-header">
     <div class="brand"><img class="brand-icon" src="/img/pwa-192.png" alt=""><div class="brand-copy"><h1>EC-Cam</h1><div class="brand-subtitle">Tus cámaras Tapo en vivo</div></div></div>
-    <div id="account"><div id="state" aria-live="polite">Conectando…</div><div class="header-actions"><button class="ghost" type="button" data-instalar style="display:none" title="Instalar «EC-Cam Web» como app con su propia ventana">⤓ Instalar app</button><button id="refreshButton" class="ghost icon-only hidden" type="button" title="Actualizar cámaras" aria-label="Actualizar cámaras">↻</button></div></div>
+    <div id="account"><div id="state" aria-live="polite">Conectando…</div><div class="header-actions"><select id="langSelect" class="lang-select" title="Idioma / Language" aria-label="Idioma / Language"><option value="es">🌐 ES</option><option value="en">🌐 EN</option></select><button class="ghost" type="button" data-instalar style="display:none" title="Instalar «EC-Cam Web» como app con su propia ventana">⤓ Instalar app</button><button id="refreshButton" class="ghost icon-only hidden" type="button" title="Actualizar cámaras" aria-label="Actualizar cámaras">↻</button></div></div>
   </header>
   <section id="loginView" class="login-wrap"><div class="login-card">
     <img class="login-brand" src="/img/pwa-192.png" alt=""><div id="credentialsView"><h2>Conectar cuenta Tapo</h2><p>Entra con el correo y la contraseña de tu cuenta Tapo (la misma de la app del celular). La contraseña no se guarda: EC-Cam guarda solo la sesión en esta PC.</p>
@@ -188,7 +189,7 @@
     const STEP_VALUES = {small: 5, medium: 10, large: 20};
     function esc(value) { return String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
     function methodName(value) { return Number(value) === 1 ? 'Notificación en la app Tapo' : 'Correo electrónico'; }
-    async function api(path, options = {}) { const opts = {credentials: 'same-origin', ...options}; if ((opts.method || 'GET').toUpperCase() === 'POST') { opts.headers = {'Content-Type': 'application/json', ...(opts.headers || {})}; if (opts.body === undefined) opts.body = '{}'; } const response = await fetch(path, opts); let data = {}; try { data = await response.json(); } catch (_) {} if (response.status === 401 && data.app_auth === false) { location.replace('/login'); throw new Error('Sesión de EC-Cam terminada.'); } if (!response.ok) throw new Error(translateError(data.error) || `Error HTTP ${response.status}`); return data; }
+    async function api(path, options = {}) { const opts = {credentials: 'same-origin', ...options}; if ((opts.method || 'GET').toUpperCase() === 'POST') { opts.headers = {'Content-Type': 'application/json', ...(opts.headers || {})}; if (opts.body === undefined) opts.body = '{}'; } const response = await fetch(path, opts); let data = {}; try { data = await response.json(); } catch (_) {} if (response.status === 401 && data.app_auth === false) { location.replace('/login'); throw new Error('Sesión de EC-Cam terminada.'); } if (!response.ok) throw new Error(localizeServerMessage(translateError(data.error)) || `Error HTTP ${response.status}`); return data; }
     function translateError(message) { const map = {'login required': 'login required', 'email and password are required': 'Escribe el correo y la contraseña.', 'no pending MFA login': 'No hay una verificación pendiente; vuelve a iniciar sesión.', 'request the MFA code first': 'Primero solicita el código.', 'MFA method is not available': 'Ese método de verificación no está disponible.', 'invalid camera': 'Cámara inválida.', 'camera did not provide a video frame': 'La cámara no envió video.'}; return map[message] || message; }
     function setState(text, tone = '') { state.textContent = text; state.className = tone; }
     function showLogin() { loginView.classList.remove('hidden'); appView.classList.add('hidden'); logoutButton.classList.add('hidden'); refreshButton.classList.add('hidden'); setState('Tapo sin conectar', 'bad'); grid.innerHTML = ''; closeRecordings?.(); }
@@ -449,7 +450,7 @@
           button.textContent = `Preparando… ${progress}%`;
         }
         recordingsStatus.className = 'recordings-status loading';
-        recordingsStatus.textContent = `${job?.message || (isDownload ? 'Preparando descarga…' : 'Preparando grabación…')} ${progress}%`;
+        recordingsStatus.textContent = `${localizeServerMessage(job?.message) || (isDownload ? 'Preparando descarga…' : 'Preparando grabación…')} ${progress}%`;
       };
       actionButtons.forEach(action => { action.disabled = true; });
       if (button) {
@@ -494,7 +495,7 @@
         recordingsStatus.className = 'recordings-status bad';
         recordingsState.preparedClipKey = '';
         recordingsState.preparedVideoUrl = '';
-        recordingsStatus.textContent = error.message || (isDownload ? 'No se pudo descargar la grabación.' : 'No se pudo preparar la grabación.');
+        recordingsStatus.textContent = localizeServerMessage(error.message) || (isDownload ? 'No se pudo descargar la grabación.' : 'No se pudo preparar la grabación.');
       } finally {
         resetButton();
         actionButtons.forEach(action => { if (action.isConnected) action.disabled = false; });
@@ -617,6 +618,28 @@
     closeRecordingsButton.addEventListener('click', closeRecordings); refreshRecordingsButton.addEventListener('click', loadRecordingDays); recordingsModal.addEventListener('click', event => { if (event.target === recordingsModal) closeRecordings(); });
     document.addEventListener('keydown', event => { if (event.key === 'Escape') { if (!recordingsModal.classList.contains('hidden')) { closeRecordings(); return; } const active = fullscreenElement(); if (active?.classList.contains('commands-open')) toggleCommands(active, active.querySelector('.commands-handle'), false); } });
     // ---------- EC-Cam: inicio ----------
+    // Mensajes que manda el servidor: el motor de Topo los da en inglés y los de
+    // EC-Cam en español; se muestran en el idioma de la página.
+    const SERVER_MESSAGES_ES = {'Starting recording preview…': 'Iniciando la grabación…', 'Connecting to playback relay…': 'Conectando con la cámara…', 'Starting camera playback…': 'Pidiendo la grabación a la cámara…', 'Downloading recording…': 'Descargando la grabación…', 'Preparing video…': 'Preparando el video…', 'Converting recording…': 'Convirtiendo la grabación…', 'Recording ready.': 'Grabación lista.', 'Recording preparation failed.': 'No se pudo preparar la grabación.'};
+    const SERVER_MESSAGES = {};
+    function localizeServerMessage(message) {
+      if (!message) return message;
+      const english = document.documentElement.lang === 'en';
+      const map = english ? SERVER_MESSAGES : SERVER_MESSAGES_ES;
+      if (map[message]) return map[message];
+      const firmware = english && String(message).match(/^Esta cámara \(firmware (.+)\) no permite reproducir grabaciones desde EC-Cam todavía/);
+      if (firmware) return `This camera (firmware ${firmware[1]}) cannot play recordings in EC-Cam yet. You can watch them in the Tapo app.`;
+      return message;
+    }
+    const langSelect = document.querySelector('#langSelect');
+    if (langSelect) {
+      langSelect.value = document.documentElement.lang === 'en' ? 'en' : 'es';
+      langSelect.addEventListener('change', () => {
+        document.cookie = `eccam_lang=${langSelect.value}; Path=/; Max-Age=31536000; SameSite=Lax`;
+        try { localStorage.setItem('eccam_lang', langSelect.value); } catch (_) {}
+        location.reload();
+      });
+    }
     function formatBuildDate(value) { const m = String(value).match(/^(\d{4})-(\d{2})-(\d{2})(?: (\d{2}:\d{2}))?/); if (!m) return value; const months = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic']; return `${Number(m[3])} ${months[Number(m[2]) - 1]} ${m[1]}${m[4] ? ', ' + m[4] : ''}`; }
     async function checkTapo() { try { const data = await api('/api/session'); if (data.authenticated) { showApp(); await load(); } else if (data.mfa_pending) showMfa(data.mfa_types); else showLogin(); } catch (_) { showLogin(); } }
     const qualitySelect = document.querySelector('#qualitySelect'); qualitySelect.value = liveVideo.quality(); qualitySelect.addEventListener('change', () => liveVideo.setGridQuality(qualitySelect.value));

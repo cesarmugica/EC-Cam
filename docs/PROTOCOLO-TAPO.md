@@ -29,17 +29,17 @@ EC-Cam (tu PC) ──┤  n-wap-gw.tplinkcloud.com  /api/v2/account/…  │─�
 
 | Paso | Archivo | Función |
 |---|---|---|
-| Firma de peticiones | `tapo_cloud_probe.py` | `TapoCloud._headers`, `post` |
-| Login, región, MFA | `tapo_cloud_probe.py` | `login`, `request_mfa`, `verify_mfa` |
-| Sesión guardada | `tapo_cloud_probe.py` | `save_session`, `load_session`, `terminal_uuid_path` |
-| Lista de cámaras | `tapo_cloud_probe.py` | `list_cameras` |
-| Descubrir servicios | `tapo_cloud_probe.py` | `discover_cipc_url`, `discover_iot_app_server` |
-| Control de la cámara | `tapo_cloud_probe.py` | `services_sync` (+ `get/set_privacy_mode`, `move_motor`, `ptz_supported`) |
-| Video en vivo | `tapo_cloud_app.py` | `CloudMediaWorker._relay_once`, `client_part` |
-| Pre-conexión | `tapo_cloud_probe.py` | `probe_cipc_preconnection` (botón «Probar conexión») |
-| Grabaciones SD | `tapo_cloud_probe.py` | `recording_dates`, `recordings_for_day`, `download_recording` |
-| Certificados de TP-Link | `certs/tapo-cloud-roots.pem` | `create_verify_context` |
-| Pruebas de diagnóstico | `eccam_relaytest.py`, `eccam_server.py` | `/api/app/relaytest`, `/api/app/diag` |
+| Firma de peticiones | `src/tapo_cloud_probe.py` | `TapoCloud._headers`, `post` |
+| Login, región, MFA | `src/tapo_cloud_probe.py` | `login`, `request_mfa`, `verify_mfa` |
+| Sesión guardada | `src/tapo_cloud_probe.py` | `save_session`, `load_session`, `terminal_uuid_path` |
+| Lista de cámaras | `src/tapo_cloud_probe.py` | `list_cameras` |
+| Descubrir servicios | `src/tapo_cloud_probe.py` | `discover_cipc_url`, `discover_iot_app_server` |
+| Control de la cámara | `src/tapo_cloud_probe.py` | `services_sync` (+ `get/set_privacy_mode`, `move_motor`, `ptz_supported`) |
+| Video en vivo | `src/tapo_cloud_app.py` | `CloudMediaWorker._relay_once`, `client_part` |
+| Pre-conexión | `src/tapo_cloud_probe.py` | `probe_cipc_preconnection` (botón «Probar conexión») |
+| Grabaciones SD | `src/tapo_cloud_probe.py` | `recording_dates`, `recordings_for_day`, `download_recording` |
+| Certificados de TP-Link | `src/certs/tapo-cloud-roots.pem` | `create_verify_context` |
+| Pruebas de diagnóstico | `src/eccam_relaytest.py`, `src/eccam_server.py` | `/api/app/relaytest`, `/api/app/diag` |
 
 ## 1. Firma de las peticiones (API de cuenta)
 
@@ -52,7 +52,7 @@ Todas las llamadas a `https://n-wap-gw.tplinkcloud.com` (o a la URL regional) so
 | `X-Authorization` | `Timestamp=9999999999, Nonce=<uuid>, AccessKey=<ACCESS_KEY>, Signature=<firma>` |
 | `User-Agent` | `okhttp/3.12.13` |
 
-`firma = HMAC-SHA1(ACCESS_SECRET, Content-MD5 + "\n" + Timestamp + "\n" + Nonce + "\n" + endpoint)` en hexadecimal. `ACCESS_KEY` y `ACCESS_SECRET` son las llaves **de la app Android** (no de tu cuenta) y están al inicio de `tapo_cloud_probe.py`. Después del login, el token va como parámetro `?token=…` en la URL.
+`firma = HMAC-SHA1(ACCESS_SECRET, Content-MD5 + "\n" + Timestamp + "\n" + Nonce + "\n" + endpoint)` en hexadecimal. `ACCESS_KEY` y `ACCESS_SECRET` son las llaves **de la app Android** (no de tu cuenta) y están al inicio de `src/tapo_cloud_probe.py`. Después del login, el token va como parámetro `?token=…` en la URL.
 
 **Si TP-Link cambia las llaves de la app**, el login empieza a fallar con un código de error de firma: hay que conseguir las nuevas (revisar Topo, tapo-view u otros proyectos) y actualizarlas junto con `APP_VERSION`.
 
@@ -208,9 +208,9 @@ FFmpeg toma el MPEG-TS y lo reempaqueta **sin recodificar** a MP4 fragmentado (`
 **Una pista muy útil:** si una cámara no se ve en EC-Cam pero sí aparece **mientras la app oficial la está viendo**, el relay y la cuenta funcionan, y lo que falta es algo que la app manda por el relay (así se descubrió el punto 5.3).
 
 **Dónde buscar cambios:**
-1. Los proyectos de referencia: [filirnd/topo](https://github.com/filirnd/topo) y [tothi/tapo-view](https://github.com/tothi/tapo-view). Comparar sus últimos cambios con `tapo_cloud_probe.py` y `tapo_cloud_app.py`.
+1. Los proyectos de referencia: [filirnd/topo](https://github.com/filirnd/topo) y [tothi/tapo-view](https://github.com/tothi/tapo-view). Comparar sus últimos cambios con `src/tapo_cloud_probe.py` y `src/tapo_cloud_app.py`.
 2. Subir `APP_VERSION` (versión de la app Android que se imita) si TP-Link empieza a rechazar versiones viejas.
-3. Si cambian los certificados del relay, actualizar `certs/tapo-cloud-roots.pem`.
+3. Si cambian los certificados del relay, actualizar `src/certs/tapo-cloud-roots.pem`.
 
 ## Historial de cambios del protocolo
 

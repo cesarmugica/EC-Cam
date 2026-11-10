@@ -30,14 +30,27 @@
     <a id="start" class="btn" href="eccam://start">▶ Iniciar EC-Cam</a>
     <p id="hint" class="hint">Si el navegador pregunta «¿Abrir EC-Cam?», elige <b>Abrir</b> (y «Permitir siempre»).</p>
     <p id="wait" class="hint" hidden>Esperando a que arranque…</p>
-    <button type="button" class="ghost" onclick="location.reload()">Reintentar</button>
+    <button id="retry" type="button" class="ghost" onclick="location.reload()">Reintentar</button>
 </div>
 <script>
 (function () {
+    var lang = (document.cookie.match(/(?:^|; )eccam_lang=(es|en)/) || [])[1];
+    if (!lang) { try { lang = localStorage.getItem('eccam_lang'); } catch (e) {} }
+    if (lang !== 'es' && lang !== 'en') lang = /^en/i.test(navigator.language || '') ? 'en' : 'es';
+    if (lang === 'en') {
+        document.documentElement.lang = 'en';
+        document.title = 'EC-Cam · Service stopped';
+        document.getElementById('t').textContent = 'The EC-Cam service is stopped';
+        document.getElementById('d').textContent = 'EC-Cam needs its service running on this PC to show your cameras.';
+        document.getElementById('start').textContent = '▶ Start EC-Cam';
+        document.getElementById('hint').innerHTML = 'If the browser asks “Open EC-Cam?”, choose <b>Open</b> (and “Always allow”).';
+        document.getElementById('wait').textContent = 'Waiting for it to start…';
+        document.getElementById('retry').textContent = 'Retry';
+    }
     var local = /^(127\.0\.0\.1|localhost|\[::1\])$/.test(location.hostname);
     if (!local) {
-        document.getElementById('t').textContent = 'Sin conexión';
-        document.getElementById('d').textContent = 'No hay internet en este momento. En cuanto vuelva la conexión, intenta de nuevo.';
+        document.getElementById('t').textContent = lang === 'en' ? 'No connection' : 'Sin conexión';
+        document.getElementById('d').textContent = lang === 'en' ? 'There is no internet right now. Try again when the connection is back.' : 'No hay internet en este momento. En cuanto vuelva la conexión, intenta de nuevo.';
         document.getElementById('start').hidden = true; document.getElementById('hint').hidden = true;
     }
     window.addEventListener('online', function () { location.reload(); });

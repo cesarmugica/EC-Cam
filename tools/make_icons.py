@@ -1,7 +1,7 @@
 """Genera los íconos de EC-Cam (PWA + Windows). Uso: python tools/make_icons.py"""
 from pathlib import Path
 from PIL import Image, ImageDraw
-OUT = Path(__file__).resolve().parent.parent / "web" / "img"
+OUT = Path(__file__).resolve().parent.parent / "src" / "web" / "img"
 BG, ORANGE, RING, LENS = (18, 22, 20), (240, 124, 30), (44, 52, 48), (10, 12, 11)
 def icon(size, maskable=False):
     s = 4 * size

@@ -34,7 +34,7 @@ from http.server import ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
-APP_VERSION = "1.2.2"
+APP_VERSION = "2.0.1"
 try:  # fecha del instalador, la escribe windows/build.ps1
     from eccam_build import BUILD_DATE  # type: ignore[import-not-found]
 except ImportError:
@@ -206,8 +206,6 @@ def _cleanup_old_login_files() -> None:
 # Rutas
 # ---------------------------------------------------------------------------
 STATIC_FILES = {
-    "/": "index.html",
-    "/index.html": "index.html",
     "/manifest.json": "manifest.json",
     "/sw.js": "sw.js",
     "/pwa.js": "pwa.js",
@@ -260,6 +258,19 @@ class EcCamHandler(engine.Handler):
     def _forbidden(self) -> None:
         self.send_json({"ok": False, "error": "Solicitud rechazada."}, 403)
 
+    def _language(self) -> str:
+        """Idioma elegido (cookie eccam_lang) o, si no hay, el del navegador."""
+        for part in (self.headers.get("Cookie") or "").split(";"):
+            name, _, value = part.strip().partition("=")
+            if name == "eccam_lang" and value in ("es", "en"):
+                return value
+        with contextlib.suppress(OSError):
+            installed = (HOME / "language.txt").read_text(encoding="utf-8").strip().lower()
+            if installed in ("es", "en"):
+                return installed  # idioma elegido en el instalador
+        accept = (self.headers.get("Accept-Language") or "").strip().lower()
+        return "en" if accept.startswith("en") else "es"
+
     def serve_web(self, relative: str) -> None:
         path = (WEB_ROOT / relative).resolve()
         if WEB_ROOT.resolve() not in path.parents or not path.is_file():
@@ -281,6 +292,9 @@ class EcCamHandler(engine.Handler):
             return
         parsed = urlsplit(self.path)
         path = parsed.path
+        if path in ("/", "/index.html"):
+            self.serve_web("index.en.html" if self._language() == "en" else "index.html")
+            return
         if path in STATIC_FILES:
             self.serve_web(STATIC_FILES[path])
             return
