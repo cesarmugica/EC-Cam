@@ -35,7 +35,7 @@ from http.server import ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlsplit
 
-APP_VERSION = "1.0.1"
+APP_VERSION = "1.0.2"
 ROOT = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent))
 EXE_DIR = Path(sys.executable).resolve().parent if getattr(sys, "frozen", False) else ROOT
 WEB_ROOT = ROOT / "web"
@@ -305,6 +305,18 @@ class EcCamHandler(engine.Handler):
                 self._deny(403, "Solo un administrador puede ver los usuarios.")
                 return
             self.send_json({"ok": True, "users": self.auth.list_users()})
+            return
+        if path == "/api/app/diag":
+            if user["role"] != "admin":
+                self._deny(403, "Solo un administrador.")
+                return
+            state = self.context.current_state()
+            workers = []
+            if state is not None:
+                with state.workers_lock:
+                    items = list(state.workers.items())
+                workers = [{"key": str(key), **worker.diagnostics()} for key, worker in items]
+            self.send_json({"ok": True, "version": APP_VERSION, "ffmpeg": os.environ.get("TOPO_FFMPEG"), "workers": workers})
             return
         if path.endswith("/native-player"):
             # El reproductor nativo abriría ventanas en la PC servidor.

@@ -264,6 +264,12 @@ class CloudMediaWorker:
             target=self._run, name=f"tapo-camera-{device.get('deviceId', '')[:8]}", daemon=True
         )
         self.last_error = ""
+        # EC-Cam: diagnóstico
+        self.relay_starts = 0
+        self.relay_failures = 0
+        self.last_data_at = 0.0
+        self.last_error_at = 0.0
+        self._last_logged_error = ""
         self.native_lock = threading.RLock()
         self.relay_lock = threading.Lock()
         self.relay_socket: ssl.SSLSocket | None = None
@@ -544,16 +550,47 @@ class CloudMediaWorker:
                 self.wake.clear()
                 continue
             try:
+                self.relay_starts += 1
                 self._relay_once()
                 self.last_error = ""
             except (OSError, RuntimeError, ssl.SSLError, EOFError) as exc:
-                self.last_error = str(exc)
+                self._note_error(f"{type(exc).__name__}: {exc}")
                 if not self.stop.wait(2):
                     continue
             except Exception as exc:  # Keep a broken relay from killing the worker.
-                self.last_error = f"unexpected media error: {exc}"
+                self._note_error(f"unexpected media error: {type(exc).__name__}: {exc}")
                 if not self.stop.wait(2):
                     continue
+
+    def _note_error(self, message: str) -> None:
+        """EC-Cam: guardar y escribir en el registro el error del relay."""
+        self.last_error = message
+        self.last_error_at = time.time()
+        self.relay_failures += 1
+        if message != self._last_logged_error or self.relay_failures % 20 == 0:
+            self._last_logged_error = message
+            name = self.device.get("alias") or self.device.get("deviceModel") or "cámara"
+            print(f"EC-Cam: {name} [{self.resolution}] falla #{self.relay_failures}: {message}", flush=True)
+
+    def diagnostics(self) -> dict:
+        with self.lock:
+            subs = (len(self.subscribers), len(self.native_video_subscribers), len(self.audio_subscribers))
+            cached = len(self.gop_cache)
+        return {
+            "camera": self.device.get("alias"),
+            "model": self.device.get("deviceModel"),
+            "firmware": self.device.get("fwVer") or self.device.get("firmwareVersion"),
+            "resolution": self.resolution,
+            "relay_open": self.relay_socket is not None,
+            "relay_starts": self.relay_starts,
+            "relay_failures": self.relay_failures,
+            "last_error": self.last_error,
+            "last_error_ago_s": round(time.time() - self.last_error_at) if self.last_error_at else None,
+            "last_data_ago_s": round(time.monotonic() - self.last_data_at, 1) if self.last_data_at else None,
+            "video_running": self.native_video_running,
+            "viewers_mjpeg_video_audio": subs,
+            "gop_cached_fragments": cached,
+        }
 
     def _relay_once(self) -> None:
         device_id = str(self.device.get("deviceId") or "")
@@ -806,8 +843,12 @@ class CloudMediaWorker:
                             key, value = line.decode("latin1").split(":", 1)
                             part_headers[key.strip().lower()] = value.strip()
                         if part_headers.get("x-if-encrypt") == "1":
-                            raise RuntimeError("relay video is encrypted: decoder is not available yet")
+                            raise RuntimeError(
+                                "relay video is encrypted: decoder is not available yet "
+                                f"(headers: {', '.join(sorted(part_headers))})"
+                            )
                         length = int(part_headers.get("content-length", "0"))
+                        self.last_data_at = time.monotonic()
                         # `/v2/relay/request` is a video-only request. Some
                         # relay nodes have returned an incomplete or unusual
                         # Content-Type value, but the payload is still the
@@ -1768,7 +1809,9 @@ class Handler(BaseHTTPRequestHandler):
                     # wait for the worker to establish the fresh relay.
                     continue
                 if first_chunk is NATIVE_STREAM_RESET:
-                    raise ConnectionError("native video relay reset")
+                    # EC-Cam: responder con el motivo en vez de cortar sin respuesta.
+                    time.sleep(0.3)
+                    raise RuntimeError(worker.last_error or "la conexión con la cámara se reinició")
 
             self.send_response(200)
             self.send_header("Content-Type", "video/mp4")
