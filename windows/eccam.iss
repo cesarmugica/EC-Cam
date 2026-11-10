@@ -42,12 +42,16 @@ Name: "desktopicon"; Description: "Crear acceso directo en el escritorio"; Group
 [Files]
 Source: "{#SourceDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
+[InstallDelete]
+; El acceso del escritorio se llamaba "Iniciar EC-Cam" (1.1.3 a 1.1.10); ahora es "EC-Cam".
+Type: files; Name: "{userdesktop}\Iniciar EC-Cam.lnk"
+
 [Icons]
 Name: "{group}\Iniciar EC-Cam"; Filename: "{app}\eccam-server.exe"; Comment: "Inicia el servicio EC-Cam y abre tus cámaras"
 Name: "{group}\Detener servicio EC-Cam"; Filename: "{sys}\taskkill.exe"; Parameters: "/IM eccam-server.exe /F"; IconFilename: "{app}\eccam-server.exe"
 Name: "{group}\Carpeta de datos de EC-Cam"; Filename: "{localappdata}\EC-Cam"
 Name: "{group}\Desinstalar EC-Cam"; Filename: "{uninstallexe}"
-Name: "{userdesktop}\Iniciar EC-Cam"; Filename: "{app}\eccam-server.exe"; Tasks: desktopicon
+Name: "{userdesktop}\EC-Cam"; Filename: "{app}\eccam-server.exe"; Tasks: desktopicon
 Name: "{userstartup}\Servicio EC-Cam"; Filename: "{app}\eccam-server.exe"; Parameters: "--no-browser"; Tasks: autostart
 
 [Run]

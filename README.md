@@ -18,7 +18,7 @@ El motor de video viene de [Topo](https://github.com/filirnd/topo) (licencia MIT
 
 Opcional: con el botón **⤓ Instalar app** (Chrome o Edge) EC-Cam queda en su propia ventana, como un programa más.
 
-En el menú Inicio quedan **Iniciar EC-Cam**, **Detener servicio EC-Cam** y **Carpeta de datos de EC-Cam**. Si marcaste la opción al instalar, el servicio arranca con Windows.
+En el escritorio queda **EC-Cam** y en el menú Inicio **Iniciar EC-Cam**, **Detener servicio EC-Cam** y **Carpeta de datos de EC-Cam**. Si marcaste la opción al instalar, el servicio arranca con Windows.
 
 Si abres EC-Cam y el servicio está detenido, la página muestra **▶ Iniciar EC-Cam**: lo arranca con un clic y entra sola en cuanto está listo (la primera vez el navegador pregunta «¿Abrir EC-Cam?»).
 

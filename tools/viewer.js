@@ -9,7 +9,7 @@
     function tileThumb(camera) {
       const thumb = viewerState.thumbs.get(String(camera.id));
       if (camera.privacy === true) return '<span class="tile-thumb">🔒</span>';
-      return thumb ? `<span class="tile-thumb" style="background-image:url('${thumb}')"></span>` : '<span class="tile-thumb">📷</span>';
+      return thumb ? `<span class="tile-thumb" style="background-image:url('${thumb}')"></span>` : '<span class="tile-thumb"><svg class="cctv-icon" viewBox="0 0 64 48" width="64" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="27" width="6" height="16" rx="1.5"/><path d="M10 35h8l4-7"/><g transform="rotate(18 34 18)"><rect x="16" y="10" width="34" height="16" rx="4"/><path d="M50 8h8v20h-8"/><path d="M12 8h40"/></g><circle cx="47" cy="23" r="2.6" fill="#F07C1E" stroke="none"/></svg></span>';
     }
     function renderTiles() {
       grid.innerHTML = viewerState.cameras.map((camera, index) => `<button class="tile${index === viewerState.index ? ' active' : ''}" type="button" data-index="${index}" aria-label="Ver ${esc(camera.name)}">${tileThumb(camera)}<span class="tile-name">${esc(camera.name)}</span><span class="tile-meta">${camera.privacy === true ? 'Privacidad activada' : esc(camera.model || 'Cámara')}</span></button>`).join('');

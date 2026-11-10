@@ -252,6 +252,7 @@ R('    @keyframes spin', """    .viewer { width: min(1100px, 100%); margin: 0 au
     .tile:hover:not(:disabled) { border-color: var(--muted); }
     .tile.active { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
     .tile-thumb { display: grid; place-items: center; aspect-ratio: 16 / 9; background: #0b0e0c center / cover no-repeat; color: var(--muted); font-size: 1.6rem; }
+    .tile-thumb .cctv-icon { width: 56px; height: auto; opacity: .85; }
     .tile-name { padding: 9px 11px 0; overflow: hidden; font-size: .9rem; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
     .tile-meta { padding: 2px 11px 11px; color: var(--muted); font-size: .75rem; font-weight: 500; }
     @media (max-width: 520px) { .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; } .nav-btn { width: 46px; height: 46px; } }
