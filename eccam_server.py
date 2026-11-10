@@ -34,7 +34,7 @@ from http.server import ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
-APP_VERSION = "1.2.1"
+APP_VERSION = "1.2.2"
 try:  # fecha del instalador, la escribe windows/build.ps1
     from eccam_build import BUILD_DATE  # type: ignore[import-not-found]
 except ImportError:
@@ -162,6 +162,37 @@ def load_config() -> dict:
         HOME.mkdir(parents=True, exist_ok=True)
         CONFIG_PATH.write_text(json.dumps(config, indent=2) + "\n", encoding="utf-8")
     return config
+
+
+def _app_browser() -> str | None:
+    """Edge (viene con Windows) o Chrome, para abrir EC-Cam como ventana propia."""
+    if os.name != "nt":
+        return shutil.which("chromium") or shutil.which("google-chrome")
+    bases = [os.environ.get(name) for name in ("ProgramFiles(x86)", "ProgramFiles", "LOCALAPPDATA")]
+    relative = [
+        Path("Microsoft") / "Edge" / "Application" / "msedge.exe",
+        Path("Google") / "Chrome" / "Application" / "chrome.exe",
+    ]
+    for rel in relative:
+        for base in bases:
+            if base and (Path(base) / rel).is_file():
+                return str(Path(base) / rel)
+    return None
+
+
+def open_app_window(url: str) -> None:
+    """Abrir EC-Cam en su propia ventana (modo aplicación, sin barra ni pestañas).
+
+    Si no hay Edge ni Chrome, usar el navegador predeterminado.
+    """
+    browser = _app_browser()
+    if browser:
+        try:
+            subprocess.Popen([browser, f"--app={url}", "--window-size=1366,860"], close_fds=True)
+            return
+        except OSError as exc:
+            print(f"No se pudo abrir la ventana de EC-Cam con {browser}: {exc}")
+    webbrowser.open(url)
 
 
 def _cleanup_old_login_files() -> None:
@@ -500,7 +531,7 @@ def main() -> int:
         # Probablemente EC-Cam ya está corriendo: solo abrir la página.
         print(f"No se pudo abrir el puerto {port}: {exc}")
         if not args.no_browser:
-            webbrowser.open(local_url)
+            open_app_window(local_url)
         return 2
     server.daemon_threads = True
 
@@ -517,7 +548,7 @@ def main() -> int:
         print("AVISO: no se encontró FFmpeg; el video en vivo no funcionará.", flush=True)
 
     if config["open_browser_on_start"] and not args.no_browser:
-        threading.Timer(1.0, webbrowser.open, args=(local_url,)).start()
+        threading.Timer(1.0, open_app_window, args=(local_url,)).start()
     try:
         server.serve_forever()
     except KeyboardInterrupt:
