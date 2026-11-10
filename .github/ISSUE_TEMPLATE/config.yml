@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: "📖 Documentación / Documentation"
+    url: https://github.com/cesarmugica/EC-Cam#readme
+    about: "Instalación, uso, compatibilidad y problemas comunes · Install, usage, compatibility and FAQ"
+  - name: "🔒 Reportar una falla de seguridad / Report a security issue"
+    url: https://github.com/cesarmugica/EC-Cam/security/advisories/new
+    about: "En privado, no en un Issue público · Privately, not in a public issue"

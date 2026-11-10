@@ -1,0 +1,78 @@
+name: "📷 Reporte de compatibilidad / Compatibility report"
+description: "Cuéntanos si EC-Cam funciona con tu cámara · Tell us whether EC-Cam works with your camera"
+title: "[Compatibilidad] <modelo> <firmware>"
+labels: ["compatibilidad"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ¡Gracias! Con estos reportes armamos la tabla de compatibilidad del README.
+        Thanks! These reports build the compatibility table in the README.
+
+        El modelo y el firmware de cada cámara aparecen en `http://127.0.0.1:8790/api/app/diag` (con EC-Cam abierto) o en la app Tapo → cámara → ⚙️ → Información del dispositivo.
+        Model and firmware: `http://127.0.0.1:8790/api/app/diag` (with EC-Cam running) or Tapo app → camera → ⚙️ → Device info.
+
+        ⚠️ **No pegues** el archivo `session.json` ni datos de tu cuenta Tapo. **Do not paste** `session.json` or Tapo account data.
+  - type: input
+    id: modelo
+    attributes:
+      label: "Modelo / Model"
+      placeholder: "C200, C210, C310, C500…"
+    validations:
+      required: true
+  - type: input
+    id: hardware
+    attributes:
+      label: "Versión de hardware / Hardware version (opcional)"
+      placeholder: "2.0"
+  - type: input
+    id: firmware
+    attributes:
+      label: "Firmware"
+      placeholder: "1.3.17 Build 260112 Rel.58281n"
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: "Versión de EC-Cam / EC-Cam version"
+      description: "Aparece debajo del nombre EC-Cam · Shown under the EC-Cam name"
+      placeholder: "2.0.1"
+    validations:
+      required: true
+  - type: dropdown
+    id: envivo
+    attributes:
+      label: "Video en vivo / Live video"
+      options: ["✅ Funciona / Works", "❌ No funciona / Doesn't work", "⚪ No probado / Not tested"]
+    validations:
+      required: true
+  - type: dropdown
+    id: lista
+    attributes:
+      label: "Lista de grabaciones de la SD / SD recording list"
+      options: ["✅ Funciona / Works", "❌ No funciona / Doesn't work", "⚪ No probado / Not tested", "— Sin memoria SD / No SD card"]
+    validations:
+      required: true
+  - type: dropdown
+    id: reproducir
+    attributes:
+      label: "Reproducir grabaciones / Play recordings"
+      options: ["✅ Funciona / Works", "❌ No funciona / Doesn't work", "⚪ No probado / Not tested", "— Sin memoria SD / No SD card"]
+    validations:
+      required: true
+  - type: dropdown
+    id: mover
+    attributes:
+      label: "Mover la cámara (pan/tilt) / Move the camera"
+      options: ["✅ Funciona / Works", "❌ No funciona / Doesn't work", "⚪ No probado / Not tested", "— La cámara no se mueve / Camera has no pan/tilt"]
+  - type: textarea
+    id: error
+    attributes:
+      label: "Mensaje de error (si hubo) / Error message (if any)"
+      description: "Por ejemplo / e.g. «la cámara rechazó la reproducción: … -52402»"
+      render: text
+  - type: textarea
+    id: notas
+    attributes:
+      label: "Notas / Notes"

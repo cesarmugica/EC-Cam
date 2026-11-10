@@ -26,4 +26,4 @@ EC-Cam se construyó sobre [Topo](https://github.com/filirnd/topo) (licencia MIT
 3. Copia el contenido de [ISSUE.md](ISSUE.md) **sin el comentario de arriba** (lo que está entre `<!--` y `-->`) y pégalo como descripción.
 4. **Create**.
 
-El reporte no menciona tu nombre, tus cámaras ni enlaza a este repositorio (es privado). Si el autor pide el código, se le puede compartir aparte.
+El reporte no menciona tus cámaras ni datos personales. Al final enlaza a este repositorio, para que el autor pueda ver el código de cada arreglo.

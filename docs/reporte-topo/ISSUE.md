@@ -57,4 +57,6 @@ In `_relay_once`, every part with `length > 0` is treated as video. With the pre
 - **Playback also needs acks** (`stream_sequence`, window 40), or long clips stall.
 - **Open question:** on C200 `1.3.17 Build 260112 Rel.58281n` the playback request always returns `{"type":"response","params":{"error_code":-52402}}`. We tried `seq` 1 vs 1000+, `channels` `[0,1]` vs `[0]`, numeric vs string times, without `event_type`/`scale`, and `X-Client-Model` set to the camera model without `X-Compete`. The exact same request works on C200 1.9.1. If you ever find what the official app sends for that firmware, we'd love to know.
 
+The code for all of the above is in our fork (MIT, credits Topo): https://github.com/cesarmugica/EC-Cam (see `src/tapo_cloud_app.py`, `src/tapo_cloud_probe.py` and `docs/PROTOCOLO-TAPO.md`).
+
 Thanks again for publishing Topo under MIT!

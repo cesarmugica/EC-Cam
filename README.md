@@ -9,6 +9,7 @@ Ver tus cámaras **Tapo** en la PC, sin emulador de Android y sin la app del cel
 | ⬇️ **Descargar** | [Última versión](https://github.com/cesarmugica/EC-Cam/releases/latest) · [Historial de versiones](CHANGELOG.md) |
 | 📷 **Cámaras** | [Modelos y firmwares compatibles](#compatibilidad) |
 | 📖 **Documentación** | [Cómo se conecta con la nube de Tapo](docs/PROTOCOLO-TAPO.md) · [Reporte para el autor de Topo](docs/reporte-topo/) |
+| 💬 **Reportar** | [¿Funciona con tu cámara?](https://github.com/cesarmugica/EC-Cam/issues/new?template=compatibilidad.yml) · [Reportar un problema](https://github.com/cesarmugica/EC-Cam/issues/new?template=problema.yml) |
 
 - Video en vivo, audio, mover la cámara (pan/tilt), modo privacidad y pantalla completa.
 - Grabaciones de la memoria SD: línea de tiempo, reproducir y descargar en MP4.
@@ -16,7 +17,7 @@ Ver tus cámaras **Tapo** en la PC, sin emulador de Android y sin la app del cel
 - Ligero: transmite solo la cámara que estás viendo.
 - En **español o inglés**: se elige en la app (🌐) y en el instalador.
 
-El motor de video viene de [Topo](https://github.com/filirnd/topo) (licencia MIT, ver `LICENSE-TOPO.txt`). El protocolo de vista previa para los firmwares nuevos está documentado por [tapo-view](https://github.com/tothi/tapo-view).
+Licencia MIT ([LICENSE](LICENSE)). El motor de video viene de [Topo](https://github.com/filirnd/topo) (licencia MIT, ver `LICENSE-TOPO.txt`). EC-Cam no está afiliado a TP-Link. El protocolo de vista previa para los firmwares nuevos está documentado por [tapo-view](https://github.com/tothi/tapo-view).
 
 ## Instalar
 
@@ -53,7 +54,7 @@ EC-Cam funciona con cámaras Tapo que se ven en la app oficial **por la nube** (
 - **Otros modelos** de cámara Tapo con conexión a la nube (por ejemplo C100, C110, C210, C220, C310, C320WS, C510W, C520WS) **probablemente funcionen**, porque usan el mismo servicio de la nube, pero **no se han probado**. El movimiento (pan/tilt) solo aparece en cámaras que lo tienen.
 - **Cámaras de batería** (C400, C420, C425…) y cámaras conectadas a un **Hub** (H200): **sin probar y probablemente no funcionen**, porque se duermen para ahorrar batería y la nube las maneja distinto.
 - **Firmware:** la reproducción de grabaciones falla en el build `58281` del C200 1.3.17; en el C200 1.9.1 y el C500 1.3.5 funciona. Si tu cámara recibe una actualización, vale la pena instalarla.
-- Si pruebas EC-Cam con otro modelo o firmware, anota el resultado: en la app, `http://127.0.0.1:8790/api/app/diag` muestra el modelo y firmware de cada cámara.
+- Si pruebas EC-Cam con otro modelo o firmware, **[cuéntanos el resultado](https://github.com/cesarmugica/EC-Cam/issues/new?template=compatibilidad.yml)**: así crece esta tabla. El modelo y firmware de cada cámara aparecen en `http://127.0.0.1:8790/api/app/diag`.
 
 ## Privacidad y seguridad
 
@@ -147,7 +148,7 @@ See your **Tapo** cameras on your Windows PC, without an Android emulator or the
 | C200 | 1.3.17 Build 260112 Rel.54862n | ✅ | not tested | not tested |
 | C500 (2 cameras) | 1.3.5 Build 260810 Rel.59315n | ✅ | ✅ | ✅ |
 
-Other cloud-connected Tapo cameras (C100, C110, C210, C220, C310, C320WS, C510W, C520WS…) will **probably work** since they use the same cloud service, but they are **not tested**. Battery cameras (C400/C420/C425) and Hub-connected cameras are not tested and probably won't work.
+Tested another model? **[Send a compatibility report](https://github.com/cesarmugica/EC-Cam/issues/new?template=compatibilidad.yml)**. Other cloud-connected Tapo cameras (C100, C110, C210, C220, C310, C320WS, C510W, C520WS…) will **probably work** since they use the same cloud service, but they are **not tested**. Battery cameras (C400/C420/C425) and Hub-connected cameras are not tested and probably won't work.
 
 **Docs:** how the Tapo cloud connection works and what to check if TP-Link changes it: [docs/PROTOCOLO-TAPO.md](docs/PROTOCOLO-TAPO.md) (Spanish). Findings shared with the Topo author: [docs/reporte-topo/](docs/reporte-topo/) (English).
 

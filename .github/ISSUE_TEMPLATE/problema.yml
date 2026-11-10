@@ -1,0 +1,38 @@
+name: "🐞 Reportar un problema / Report a problem"
+description: "Algo no funciona como debería · Something isn't working as expected"
+title: "[Problema] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ⚠️ **No pegues** `session.json`, tu correo ni tu contraseña de Tapo. **Do not paste** `session.json`, your email or your Tapo password.
+  - type: input
+    id: version
+    attributes:
+      label: "Versión de EC-Cam / EC-Cam version"
+      placeholder: "2.0.1"
+    validations:
+      required: true
+  - type: input
+    id: camara
+    attributes:
+      label: "Cámara (modelo y firmware) / Camera (model and firmware)"
+      placeholder: "C200 · 1.9.1 Build 260326"
+  - type: textarea
+    id: que
+    attributes:
+      label: "¿Qué pasó? / What happened?"
+    validations:
+      required: true
+  - type: textarea
+    id: pasos
+    attributes:
+      label: "¿Cómo reproducirlo? / Steps to reproduce"
+      placeholder: "1. …\n2. …"
+  - type: textarea
+    id: log
+    attributes:
+      label: "Registro / Log (opcional)"
+      description: "Las últimas líneas de `%LOCALAPPDATA%\\EC-Cam\\logs\\eccam.log` · Last lines of the log"
+      render: text
