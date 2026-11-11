@@ -195,8 +195,10 @@
           if (entry.frameWatch && entry.played && now - entry.lastFrameAt > 5000) { restart(entry, 'Video congelado. Reconectando…'); continue; }
           if (video.buffered.length) {
             const behind = video.buffered.end(video.buffered.length - 1) - video.currentTime;
-            if (behind > 3) video.currentTime = video.buffered.end(video.buffered.length - 1) - 0.4;
-            else video.playbackRate = behind > 1.2 ? 1.08 : 1;
+            // Colchón de ~1 s detrás del en vivo: aguanta pausas cortas de
+            // internet sin detenerse. Se ajusta con la velocidad (±5 %).
+            if (behind > 4) video.currentTime = video.buffered.end(video.buffered.length - 1) - 1.2;
+            else video.playbackRate = behind > 2 ? 1.05 : (behind < 0.7 && entry.played ? 0.95 : 1);
           }
           if (video.paused && entry.played && !document.hidden) { const playback = video.play(); if (playback) playback.catch(() => {}); }
         }
