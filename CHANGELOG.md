@@ -2,6 +2,10 @@
 
 Cada versión tiene su instalador en [Releases](https://github.com/cesarmugica/EC-Cam/releases). La fecha y hora de cada compilación aparecen dentro de la app, debajo del nombre EC-Cam.
 
+## 2.2.0 — Video más fluido
+- **Nuevo reproductor del en vivo (Media Source Extensions):** EC-Cam le pasa el video a la ventana fragmento por fragmento, se mantiene pegado al en vivo y borra lo ya visto. Evita que la imagen se congele cada 20–60 segundos (pasaba sobre todo en la C500 con la ventana de Edge).
+- Si el navegador no puede usar ese reproductor, EC-Cam vuelve solo al anterior.
+
 ## 2.1.3
 - La reconexión automática de un video congelado ahora espera 5 segundos (antes 8 y 9).
 

@@ -188,6 +188,7 @@ PAIRS: list[tuple[str, str]] = [
     ("'La memoria SD está bien, pero no tiene grabaciones.' : 'No se detectó memoria SD.'", "'The SD card is fine but has no recordings.' : 'No SD card detected.'"),
     ("`Grabaciones · ${name}`", "`Recordings · ${name}`"),
     ("'Memoria SD · hora local de la cámara'", "'SD card · camera local time'"),
+    ("'Cambiando de reproductor…'", "'Switching player…'"),
     # --- 2.1.0: Probar mis cámaras ---
     ("Prueba tus cámaras y envía un reporte de compatibilidad", "Test your cameras and send a compatibility report"),
     ("🧪 Probar mis cámaras", "🧪 Test my cameras"),

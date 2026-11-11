@@ -238,17 +238,114 @@
         if (state === 'loading' && text) entry.loading.textContent = text;
         if (state === 'error' && text) entry.errorText.textContent = text;
       }
+      // ---------- Reproductor MSE (Media Source Extensions) ----------
+      // El MP4 en vivo no tiene fin; como descarga progresiva, el reproductor de
+      // Edge a veces deja de pintar a los pocos segundos. Con MSE EC-Cam le da
+      // los fragmentos uno por uno, se mantiene en el borde del en vivo y borra
+      // lo ya visto. Si el navegador no tiene MSE, se usa la descarga normal.
+      const MSE_OK = typeof MediaSource !== 'undefined' && typeof MediaSource.isTypeSupported === 'function';
+      const u32 = (b, o) => ((b[o] << 24) >>> 0) + (b[o + 1] << 16) + (b[o + 2] << 8) + b[o + 3];
+      const boxType = (b, o) => String.fromCharCode(b[o + 4], b[o + 5], b[o + 6], b[o + 7]);
+      function codecFromInit(init) {
+        for (let i = 4; i + 8 < init.length; i++) {
+          if (init[i] === 0x61 && init[i + 1] === 0x76 && init[i + 2] === 0x63 && init[i + 3] === 0x43) { // avcC
+            const hex = n => n.toString(16).padStart(2, '0');
+            return `avc1.${hex(init[i + 5])}${hex(init[i + 6])}${hex(init[i + 7])}`;
+          }
+        }
+        return 'avc1.640028';
+      }
+      function startMse(entry, url) {
+        const video = entry.video, mediaSource = new MediaSource(), controller = new AbortController();
+        const session = {controller, mediaSource, objectUrl: URL.createObjectURL(mediaSource), closed: false};
+        entry.mse = session;
+        video.src = session.objectUrl;
+        const fail = reason => { if (session.closed || entry.mse !== session) return; restart(entry, reason || 'Video interrumpido. Reconectando…'); };
+        mediaSource.addEventListener('sourceopen', async () => {
+          let sourceBuffer = null, pending = [], pendingBytes = 0, carry = new Uint8Array(0), init = [], lastTrim = 0;
+          const pump = () => {
+            if (!sourceBuffer || sourceBuffer.updating || session.closed || mediaSource.readyState !== 'open') return;
+            const end = video.buffered.length ? video.buffered.end(video.buffered.length - 1) : 0;
+            // Borrar lo ya visto (deja 8 s atrás) para no llenar la memoria.
+            if (video.buffered.length && video.currentTime - video.buffered.start(0) > 20 && Date.now() - lastTrim > 5000) {
+              lastTrim = Date.now();
+              try { sourceBuffer.remove(video.buffered.start(0), Math.max(video.buffered.start(0), video.currentTime - 8)); return; } catch (_) {}
+            }
+            if (!pending.length) return;
+            const chunk = new Uint8Array(pendingBytes); let offset = 0;
+            for (const part of pending) { chunk.set(part, offset); offset += part.length; }
+            pending = []; pendingBytes = 0;
+            try { sourceBuffer.appendBuffer(chunk); }
+            catch (error) { if (error && error.name === 'QuotaExceededError' && end) { try { sourceBuffer.remove(0, Math.max(0, video.currentTime - 2)); } catch (_) {} pending.unshift(chunk); pendingBytes += chunk.length; } else fail(); }
+          };
+          const afterAppend = () => {
+            if (!video.buffered.length) return;
+            const start = video.buffered.start(0), end = video.buffered.end(video.buffered.length - 1);
+            // El primer fragmento no empieza en 0 (se entra desde el último cuadro clave).
+            if (video.currentTime < start || video.currentTime > end) video.currentTime = Math.max(start, end - 0.5);
+            if (video.paused && !document.hidden) { const playback = video.play(); if (playback) playback.catch(() => {}); }
+            pump();
+          };
+          try {
+            const response = await fetch(url, {signal: controller.signal, credentials: 'same-origin', cache: 'no-store'});
+            if (!response.ok || !response.body) { fail(); return; }
+            const reader = response.body.getReader();
+            while (!session.closed) {
+              const {done, value} = await reader.read();
+              if (done) break;
+              let data = value;
+              if (carry.length) { data = new Uint8Array(carry.length + value.length); data.set(carry); data.set(value, carry.length); }
+              let offset = 0;
+              while (data.length - offset >= 8) {
+                const size = u32(data, offset);
+                if (size < 8) { fail(); return; }
+                if (data.length - offset < size) break;
+                const box = data.subarray(offset, offset + size), type = boxType(data, offset);
+                offset += size;
+                if (!sourceBuffer) {
+                  init.push(box.slice());
+                  if (type !== 'moov') continue;
+                  const initBytes = new Uint8Array(init.reduce((n, part) => n + part.length, 0)); let o = 0;
+                  for (const part of init) { initBytes.set(part, o); o += part.length; }
+                  const mime = `video/mp4; codecs="${codecFromInit(initBytes)}"`;
+                  if (!MediaSource.isTypeSupported(mime)) { entry.noMse = true; fail('Cambiando de reproductor…'); return; }
+                  sourceBuffer = mediaSource.addSourceBuffer(mime);
+                  sourceBuffer.mode = 'segments';
+                  sourceBuffer.addEventListener('updateend', afterAppend);
+                  sourceBuffer.addEventListener('error', () => fail());
+                  pending.push(initBytes); pendingBytes += initBytes.length;
+                } else { pending.push(box.slice()); pendingBytes += box.length; }
+              }
+              carry = data.slice(offset);
+              pump();
+            }
+            fail();
+          } catch (error) {
+            if (!session.closed) fail();
+          }
+        }, {once: true});
+      }
+      function closeMse(entry) {
+        const session = entry.mse; if (!session) return;
+        session.closed = true; entry.mse = null;
+        try { session.controller.abort(); } catch (_) {}
+        try { if (session.mediaSource.readyState === 'open') session.mediaSource.endOfStream(); } catch (_) {}
+        setTimeout(() => URL.revokeObjectURL(session.objectUrl), 1000);
+      }
       function start(entry, quality) {
         clearTimeout(entry.retryTimer); entry.retryTimer = null;
+        closeMse(entry);
         entry.quality = quality; entry.running = true; entry.played = false;
         entry.lastTime = -1; entry.lastProgress = Date.now(); entry.lastFrameAt = Date.now();
-        entry.video.src = streamUrl(entry, quality);
+        if (MSE_OK && !entry.noMse) startMse(entry, streamUrl(entry, quality));
+        else entry.video.src = streamUrl(entry, quality);
         setOverlay(entry, 'loading', quality === 'hd' ? 'Conectando en HD…' : 'Conectando con la cámara…');
         const playback = entry.video.play(); if (playback) playback.catch(() => {});
       }
       function stop(entry) {
         clearTimeout(entry.retryTimer); entry.retryTimer = null;
         entry.running = false;
+        closeMse(entry);
         entry.video.pause(); entry.video.removeAttribute('src'); entry.video.load();
       }
       function restart(entry, reason) {
@@ -337,7 +434,7 @@
           video.requestVideoFrameCallback(onFrame);
         }
         video.addEventListener('playing', ready);
-        video.addEventListener('error', () => { if (entry.running) restart(entry, 'Video interrumpido. Reconectando…'); });
+        video.addEventListener('error', () => { if (entry.running) { if (entry.mse && video.error && video.error.code === 4) entry.noMse = true; restart(entry, 'Video interrumpido. Reconectando…'); } });
         video.addEventListener('ended', () => { if (entry.running) restart(entry, 'Video interrumpido. Reconectando…'); });
         entry.error.querySelector('.retry-button')?.addEventListener('click', event => { event.stopPropagation(); entry.attempts = 0; clearTimeout(entry.retryTimer); entry.retryTimer = null; if (entry.wanted) start(entry, entry.wantedQuality); else refresh(); });
         entries.set(card, entry);
