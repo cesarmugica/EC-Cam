@@ -31,7 +31,7 @@
       function start(entry, quality) {
         clearTimeout(entry.retryTimer); entry.retryTimer = null;
         entry.quality = quality; entry.running = true; entry.played = false;
-        entry.lastTime = -1; entry.lastProgress = Date.now();
+        entry.lastTime = -1; entry.lastProgress = Date.now(); entry.lastFrameAt = Date.now();
         entry.video.src = streamUrl(entry, quality);
         setOverlay(entry, 'loading', quality === 'hd' ? 'Conectando en HD…' : 'Conectando con la cámara…');
         const playback = entry.video.play(); if (playback) playback.catch(() => {});
@@ -93,6 +93,9 @@
           if (!entry.running) continue;
           if (video.currentTime > entry.lastTime + 0.05) { entry.lastTime = video.currentTime; entry.lastProgress = now; }
           else if (now - entry.lastProgress > (entry.played ? 9000 : 25000)) { restart(entry, 'Video congelado. Reconectando…'); continue; }
+          // EC-Cam: imagen congelada aunque el tiempo avance (el navegador deja
+          // de pintar cuadros, p. ej. si el video llega dañado): reconectar.
+          if (entry.frameWatch && entry.played && now - entry.lastFrameAt > 8000) { restart(entry, 'Video congelado. Reconectando…'); continue; }
           if (video.buffered.length) {
             const behind = video.buffered.end(video.buffered.length - 1) - video.currentTime;
             if (behind > 3) video.currentTime = video.buffered.end(video.buffered.length - 1) - 0.4;
@@ -116,7 +119,13 @@
         entry.paused.type = 'button'; entry.paused.className = 'preview-status paused hidden'; entry.paused.textContent = '▶ En pausa · toca para ver en vivo';
         preview.appendChild(entry.paused);
         entry.paused.addEventListener('click', event => { event.stopPropagation(); pinned = [card, ...pinned.filter(item => item !== card)].slice(0, maxLive); refresh(); });
-        const ready = () => { entry.played = true; entry.attempts = 0; entry.lastProgress = Date.now(); setOverlay(entry, 'none'); };
+        const ready = () => { entry.played = true; entry.attempts = 0; entry.lastProgress = Date.now(); entry.lastFrameAt = Date.now(); setOverlay(entry, 'none'); };
+        // Contar los cuadros que de verdad se pintan (Chrome y Edge).
+        if ('requestVideoFrameCallback' in video) {
+          entry.frameWatch = true;
+          const onFrame = () => { entry.lastFrameAt = Date.now(); video.requestVideoFrameCallback(onFrame); };
+          video.requestVideoFrameCallback(onFrame);
+        }
         video.addEventListener('playing', ready);
         video.addEventListener('error', () => { if (entry.running) restart(entry, 'Video interrumpido. Reconectando…'); });
         video.addEventListener('ended', () => { if (entry.running) restart(entry, 'Video interrumpido. Reconectando…'); });

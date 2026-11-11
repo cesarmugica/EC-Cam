@@ -2,6 +2,9 @@
 
 Cada versión tiene su instalador en [Releases](https://github.com/cesarmugica/EC-Cam/releases). La fecha y hora de cada compilación aparecen dentro de la app, debajo del nombre EC-Cam.
 
+## 2.1.2
+- Si la imagen se queda congelada aunque el video siga «corriendo», EC-Cam ahora lo detecta (cuenta los cuadros que de verdad se pintan) y se reconecta solo en unos 8 segundos, sin tener que volver a elegir la cámara.
+
 ## 2.1.1
 - Las cámaras **sin memoria SD** ahora salen como «— Sin memoria SD» en la prueba y en Grabaciones, en vez de marcarse como falla.
 
