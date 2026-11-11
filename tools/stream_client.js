@@ -92,10 +92,10 @@
           const video = entry.video;
           if (!entry.running) continue;
           if (video.currentTime > entry.lastTime + 0.05) { entry.lastTime = video.currentTime; entry.lastProgress = now; }
-          else if (now - entry.lastProgress > (entry.played ? 9000 : 25000)) { restart(entry, 'Video congelado. Reconectando…'); continue; }
+          else if (now - entry.lastProgress > (entry.played ? 5000 : 25000)) { restart(entry, 'Video congelado. Reconectando…'); continue; }
           // EC-Cam: imagen congelada aunque el tiempo avance (el navegador deja
           // de pintar cuadros, p. ej. si el video llega dañado): reconectar.
-          if (entry.frameWatch && entry.played && now - entry.lastFrameAt > 8000) { restart(entry, 'Video congelado. Reconectando…'); continue; }
+          if (entry.frameWatch && entry.played && now - entry.lastFrameAt > 5000) { restart(entry, 'Video congelado. Reconectando…'); continue; }
           if (video.buffered.length) {
             const behind = video.buffered.end(video.buffered.length - 1) - video.currentTime;
             if (behind > 3) video.currentTime = video.buffered.end(video.buffered.length - 1) - 0.4;
