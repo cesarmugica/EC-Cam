@@ -7,7 +7,7 @@
   #define AppVersion "1.0.0"
 #endif
 #ifndef SourceDir
-  #define SourceDir "dist\eccam-server"
+  #define SourceDir "dist\eccam"
 #endif
 
 [Setup]
@@ -22,7 +22,7 @@ DisableProgramGroupPage=yes
 PrivilegesRequired=lowest
 OutputBaseFilename=EC-Cam-Setup-{#AppVersion}
 SetupIconFile=..\src\web\img\eccam.ico
-UninstallDisplayIcon={app}\eccam-server.exe
+UninstallDisplayIcon={app}\app\web\img\eccam.ico
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
@@ -60,6 +60,11 @@ en.IconUninstall=Uninstall EC-Cam
 Name: "autostart"; Description: "{cm:TaskAutostart}"; GroupDescription: "{cm:GroupService}"
 Name: "desktopicon"; Description: "{cm:TaskDesktop}"; GroupDescription: "{cm:GroupShortcuts}"
 
+; Desde la 2.3.0 EC-Cam corre con el Python oficial firmado (python\pythonw.exe)
+; y su código en app\. Ya no hay eccam-server.exe (Windows 11 lo bloqueaba).
+#define Py "{app}\python\pythonw.exe"
+#define Ico "{app}\app\web\img\eccam.ico"
+
 [Files]
 Source: "{#SourceDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
@@ -68,28 +73,33 @@ Source: "{#SourceDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs 
 Type: files; Name: "{userdesktop}\Iniciar EC-Cam.lnk"
 ; Los accesos del menú Inicio cambian de nombre según el idioma: limpiar los anteriores.
 Type: files; Name: "{group}\*.lnk"
+; Versiones anteriores (compiladas con PyInstaller)
+Type: files; Name: "{app}\eccam-server.exe"
+Type: files; Name: "{app}\ffmpeg.exe"
+Type: filesandordirs; Name: "{app}\_internal"
+Type: filesandordirs; Name: "{app}\app"
 
 [Icons]
-Name: "{group}\{cm:IconStart}"; Filename: "{app}\eccam-server.exe"; Comment: "{cm:IconStartComment}"
-Name: "{group}\{cm:IconStop}"; Filename: "{sys}\taskkill.exe"; Parameters: "/IM eccam-server.exe /F"; IconFilename: "{app}\eccam-server.exe"
+Name: "{group}\{cm:IconStart}"; Filename: "{#Py}"; Parameters: """{app}\app\eccam_server.py"""; WorkingDir: "{app}"; IconFilename: "{#Ico}"; Comment: "{cm:IconStartComment}"
+Name: "{group}\{cm:IconStop}"; Filename: "{#Py}"; Parameters: """{app}\app\eccam_server.py"" --stop"; WorkingDir: "{app}"; IconFilename: "{#Ico}"
 Name: "{group}\{cm:IconData}"; Filename: "{localappdata}\EC-Cam"
 Name: "{group}\{cm:IconUninstall}"; Filename: "{uninstallexe}"
-Name: "{userdesktop}\EC-Cam"; Filename: "{app}\eccam-server.exe"; Tasks: desktopicon
-Name: "{userstartup}\Servicio EC-Cam"; Filename: "{app}\eccam-server.exe"; Parameters: "--no-browser"; Tasks: autostart
+Name: "{userdesktop}\EC-Cam"; Filename: "{#Py}"; Parameters: """{app}\app\eccam_server.py"""; WorkingDir: "{app}"; IconFilename: "{#Ico}"; Tasks: desktopicon
+Name: "{userstartup}\Servicio EC-Cam"; Filename: "{#Py}"; Parameters: """{app}\app\eccam_server.py"" --no-browser"; WorkingDir: "{app}"; IconFilename: "{#Ico}"; Tasks: autostart
 
 [Run]
 ; Siempre arrancar el servicio al terminar (antes dependía de una casilla).
-Filename: "{app}\eccam-server.exe"; Flags: nowait skipifsilent
+Filename: "{#Py}"; Parameters: """{app}\app\eccam_server.py"""; WorkingDir: "{app}"; Flags: nowait skipifsilent
 
 [Registry]
 ; Enlace eccam:// para el botón "Iniciar EC-Cam" de la página (por usuario, sin admin).
 Root: HKCU; Subkey: "Software\Classes\eccam"; ValueType: string; ValueName: ""; ValueData: "URL:EC-Cam"; Flags: uninsdeletekey
 Root: HKCU; Subkey: "Software\Classes\eccam"; ValueType: string; ValueName: "URL Protocol"; ValueData: ""
-Root: HKCU; Subkey: "Software\Classes\eccam\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: "{app}\eccam-server.exe,0"
-Root: HKCU; Subkey: "Software\Classes\eccam\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\eccam-server.exe"" --no-browser"
+Root: HKCU; Subkey: "Software\Classes\eccam\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: "{#Ico}"
+Root: HKCU; Subkey: "Software\Classes\eccam\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\python\pythonw.exe"" ""{app}\app\eccam_server.py"" --no-browser"
 
 [UninstallRun]
-Filename: "{sys}\taskkill.exe"; Parameters: "/IM eccam-server.exe /F"; Flags: runhidden; RunOnceId: "StopEcCam"
+Filename: "{#Py}"; Parameters: """{app}\app\eccam_server.py"" --stop"; Flags: runhidden waituntilterminated; RunOnceId: "StopEcCam"
 
 [Code]
 procedure CurStepChanged(CurStep: TSetupStep);
@@ -97,7 +107,14 @@ var R: Integer;
 begin
   { Detener una versión anterior antes de copiar archivos }
   if CurStep = ssInstall then
+  begin
+    { 2.3.0 o más nueva: pedirle al servicio que se cierre }
+    if FileExists(ExpandConstant('{app}\python\pythonw.exe')) then
+      Exec(ExpandConstant('{app}\python\pythonw.exe'), '"' + ExpandConstant('{app}\app\eccam_server.py') + '" --stop', ExpandConstant('{app}'), SW_HIDE, ewWaitUntilTerminated, R);
+    { Versiones anteriores (eccam-server.exe) }
     Exec(ExpandConstant('{sys}\taskkill.exe'), '/IM eccam-server.exe /F', '', SW_HIDE, ewWaitUntilTerminated, R);
+    Sleep(800);
+  end;
   { El idioma del instalador es el idioma inicial de la app (luego se cambia en la app) }
   if CurStep = ssPostInstall then
   begin

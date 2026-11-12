@@ -34,7 +34,7 @@ from http.server import ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
-APP_VERSION = "2.2.1"
+APP_VERSION = "2.3.0"
 try:  # fecha del instalador, la escribe windows/build.ps1
     from eccam_build import BUILD_DATE  # type: ignore[import-not-found]
 except ImportError:
@@ -137,6 +137,41 @@ def _import_engine():
             _time.sleep(2)
     raise last_error  # type: ignore[misc]
 
+
+PID_PATH = HOME / "eccam.pid"
+
+
+def _stop_running_service() -> int:
+    """«Detener servicio EC-Cam»: pedirle al servicio que se cierre.
+
+    Desde la 2.3.0 EC-Cam corre con el Python oficial (pythonw.exe), así que
+    ya no se puede cerrar por nombre de proceso sin cerrar otros programas.
+    """
+    import http.client
+
+    port = DEFAULT_PORT
+    with contextlib.suppress(OSError, ValueError, json.JSONDecodeError):
+        port = int(json.loads((HOME / "config.json").read_text(encoding="utf-8")).get("port", DEFAULT_PORT))
+    try:
+        conn = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
+        conn.request("POST", "/api/app/stop", body="{}", headers={"Content-Type": "application/json"})
+        conn.getresponse().read()
+        return 0
+    except OSError:
+        pass
+    # No respondió: cerrar el proceso anotado en eccam.pid (si es de EC-Cam).
+    with contextlib.suppress(OSError, ValueError):
+        pid = int(PID_PATH.read_text().strip())
+        if os.name == "nt":
+            subprocess.run(["taskkill", "/PID", str(pid), "/F"], capture_output=True,
+                           creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+        else:
+            os.kill(pid, 15)
+    return 0
+
+
+if __name__ == "__main__" and "--stop" in sys.argv[1:]:
+    raise SystemExit(_stop_running_service())
 
 engine = _import_engine()  # motor de Topo
 
@@ -343,6 +378,18 @@ class EcCamHandler(engine.Handler):
             self._forbidden()
             return
         post_path = urlsplit(self.path).path
+        if post_path == "/api/app/stop":
+            self.send_json({"ok": True})
+            print("EC-Cam: detenido desde «Detener servicio EC-Cam».", flush=True)
+            context = self.context
+
+            def _bye() -> None:
+                with contextlib.suppress(Exception):
+                    context.close()  # cerrar FFmpeg y las conexiones con las cámaras
+                os._exit(0)
+
+            threading.Timer(0.3, _bye).start()
+            return
         if post_path.startswith("/api/recording-jobs/") and post_path.endswith("/cancel"):
             state = self.context.current_state()
             job_id = post_path[len("/api/recording-jobs/"):-len("/cancel")]
@@ -530,6 +577,7 @@ def main() -> int:
     parser.add_argument("--port", type=int, help=f"puerto (por defecto {DEFAULT_PORT})")
     parser.add_argument("--fresh-login", action="store_true", help="olvidar la sesión de Tapo guardada")
     parser.add_argument("--no-browser", action="store_true", help="no abrir el navegador al iniciar")
+    parser.add_argument("--stop", action="store_true", help="detener el servicio que está corriendo")
     parser.add_argument("--version", action="version", version=f"EC-Cam {APP_VERSION} {BUILD_DATE}".strip())
     args = parser.parse_args()
 
@@ -548,6 +596,8 @@ def main() -> int:
             open_app_window(local_url)
         return 2
     server.daemon_threads = True
+    with contextlib.suppress(OSError):
+        PID_PATH.write_text(str(os.getpid()))
 
     try:
         context = engine.CloudAppContext(args.fresh_login)

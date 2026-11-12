@@ -2,6 +2,11 @@
 
 Cada versión tiene su instalador en [Releases](https://github.com/cesarmugica/EC-Cam/releases). La fecha y hora de cada compilación aparecen dentro de la app, debajo del nombre EC-Cam.
 
+## 2.3.0 — Funciona con el Control inteligente de Windows 11
+- EC-Cam ya no se compila a un `.exe` propio sin firma, que el **Control inteligente de aplicaciones** de Windows 11 bloqueaba («An Application Control policy has blocked this file»). Ahora corre con el **Python oficial de python.org, firmado por la Python Software Foundation**, que se instala junto con EC-Cam.
+- «Detener servicio EC-Cam» ahora le pide al servicio que se cierre (antes cerraba el proceso por nombre).
+- La app se ve y funciona igual; al actualizar se borran los archivos de la versión anterior.
+
 ## 2.2.1
 - El en vivo deja un colchón de ~1 segundo: las pausas cortas de internet ya casi no detienen la imagen (a cambio de ir ~1 s detrás del en vivo).
 
