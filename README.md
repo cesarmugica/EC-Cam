@@ -81,6 +81,7 @@ Carpeta: `%LOCALAPPDATA%\EC-Cam\`
 | «La cámara no está enviando video» | Prueba **Actualizar**; si sigue, revisa que la cámara se vea en la app Tapo. |
 | El video se congela | Se reconecta solo; con internet lento usa «Calidad ligera (SD)». |
 | «El servicio EC-Cam está detenido» | Botón **▶ Iniciar EC-Cam**, o menú Inicio → **Iniciar EC-Cam**. |
+| Windows 11: «An Application Control policy has blocked this file» | Es el **Control inteligente de aplicaciones**, que bloquea programas sin firma y no permite excepciones. Desactívalo en Configuración → Privacidad y seguridad → Seguridad de Windows → Control de aplicaciones y del explorador → Configuración del control inteligente → **Desactivado**. |
 
 ## Para desarrolladores
 
@@ -137,7 +138,7 @@ See your **Tapo** cameras on your Windows PC, without an Android emulator or the
 - Works from anywhere: it connects through the Tapo cloud like the official app. No port forwarding or VPN.
 - Spanish or English (🌐 selector in the app; also chosen in the installer).
 
-**Install:** download `EC-Cam-Setup-x.y.z.exe` from the [latest release](https://github.com/cesarmugica/EC-Cam/releases/latest), run it (no admin needed; if SmartScreen warns, choose *More info → Run anyway*), and sign in with your Tapo account. EC-Cam only stores the session on your PC, never the password, and it only answers on `127.0.0.1`.
+**Install:** download `EC-Cam-Setup-x.y.z.exe` from the [latest release](https://github.com/cesarmugica/EC-Cam/releases/latest), run it (no admin needed; if SmartScreen warns, choose *More info → Run anyway*), and sign in with your Tapo account. On Windows 11, if you see "An Application Control policy has blocked this file", turn off **Smart App Control** (Settings → Privacy & security → Windows Security → App & browser control → Smart App Control settings → Off); EC-Cam is not code-signed. EC-Cam only stores the session on your PC, never the password, and it only answers on `127.0.0.1`.
 
 **Compatibility (tested):**
 

@@ -2,10 +2,11 @@
 
 Cada versión tiene su instalador en [Releases](https://github.com/cesarmugica/EC-Cam/releases). La fecha y hora de cada compilación aparecen dentro de la app, debajo del nombre EC-Cam.
 
-## 2.3.0 — Funciona con el Control inteligente de Windows 11
-- EC-Cam ya no se compila a un `.exe` propio sin firma, que el **Control inteligente de aplicaciones** de Windows 11 bloqueaba («An Application Control policy has blocked this file»). Ahora corre con el **Python oficial de python.org, firmado por la Python Software Foundation**, que se instala junto con EC-Cam.
-- «Detener servicio EC-Cam» ahora le pide al servicio que se cierre (antes cerraba el proceso por nombre).
-- La app se ve y funciona igual; al actualizar se borran los archivos de la versión anterior.
+## 2.3.0 — ⚠️ No superó la prueba (se quitó el instalador)
+- **Resultado de la prueba:** en Windows 11 con el **Control inteligente de aplicaciones** encendido, el propio instalador quedó bloqueado («Unable to execute file in the temporary directory… Error 4551: An Application Control policy has blocked this file»). El instalador de Inno Setup tampoco está firmado, así que el cambio no resolvió el problema. Se quitó el instalador de esta versión; usa la 2.2.1 y, en Windows 11, desactiva el Control inteligente.
+- **Lo que se intentó** (el código se revirtió a la 2.2.1):
+  - Dejar de compilar EC-Cam a un `.exe` propio sin firma y correrlo con el **Python oficial de python.org, firmado por la Python Software Foundation**, instalado junto con EC-Cam.
+  - «Detener servicio EC-Cam» pidiéndole al servicio que se cierre, en vez de cerrar el proceso por nombre.
 
 ## 2.2.1
 - El en vivo deja un colchón de ~1 segundo: las pausas cortas de internet ya casi no detienen la imagen (a cambio de ir ~1 s detrás del en vivo).
