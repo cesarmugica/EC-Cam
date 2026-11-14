@@ -74,7 +74,7 @@ Invoke-Checked $python ($pythonArgs + @(
   '--paths', $srcRoot,
   '--exclude-module', 'tkinter',
   # Módulos propios: incluirlos siempre aunque se carguen dentro de funciones.
-  '--hidden-import', 'tapo_cloud_app', '--hidden-import', 'tapo_cloud_probe',
+  '--hidden-import', 'tapo_cloud_app', '--hidden-import', 'tapo_cloud_probe', '--hidden-import', 'eccam_update',
   '--hidden-import', 'eccam_relaytest', '--hidden-import', 'eccam_sdtest', '--hidden-import', 'eccam_playtest',
   '--distpath', $distDir,
   '--workpath', (Join-Path $scriptDir '.build'),

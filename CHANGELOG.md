@@ -2,6 +2,11 @@
 
 Cada versión tiene su instalador en [Releases](https://github.com/cesarmugica/EC-Cam/releases). La fecha y hora de cada compilación aparecen dentro de la app, debajo del nombre EC-Cam.
 
+## 2.4.0 — Botón «Actualizar» / "Update" button
+- EC-Cam busca versión nueva al iniciar y cada 6 horas. Si hay, muestra **⬆ Actualizar** arriba: la baja de los Releases de este repo, revisa que no venga dañada (SHA-256), se instala en silencio (en tu idioma) y el servicio vuelve a arrancar solo. Sin pasar por Edge, así que ya no sale el aviso de «no se descarga comúnmente». Las versiones marcadas ⚠️ (como la 2.3.0) se ignoran.
+- «Buscar actualización» abajo, junto a la versión.
+- *EN:* EC-Cam checks for new versions at start and every 6 hours and shows **⬆ Update**: it downloads from this repo's Releases, verifies SHA-256, installs silently and restarts. "Check for updates" link at the bottom.
+
 ## 2.3.0 — ⚠️ No superó la prueba (se quitó el instalador)
 - **Resultado de la prueba:** en Windows 11 con el **Control inteligente de aplicaciones** encendido, el propio instalador quedó bloqueado («Unable to execute file in the temporary directory… Error 4551: An Application Control policy has blocked this file»). El instalador de Inno Setup tampoco está firmado, así que el cambio no resolvió el problema. Se quitó el instalador de esta versión; usa la 2.2.1 y, en Windows 11, desactiva el Control inteligente.
 - **Lo que se intentó** (el código se revirtió a la 2.2.1):

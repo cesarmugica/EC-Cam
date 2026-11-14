@@ -34,7 +34,7 @@ from http.server import ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
-APP_VERSION = "2.2.1"
+APP_VERSION = "2.4.0"
 try:  # fecha del instalador, la escribe windows/build.ps1
     from eccam_build import BUILD_DATE  # type: ignore[import-not-found]
 except ImportError:
@@ -313,6 +313,9 @@ class EcCamHandler(engine.Handler):
                 "build_date": BUILD_DATE,
             })
             return
+        if path == "/api/app/update":
+            self.send_json(UPDATER.public())
+            return
         if path == "/api/app/stream-status":
             self._stream_status(parse_qs(parsed.query))
             return
@@ -343,6 +346,16 @@ class EcCamHandler(engine.Handler):
             self._forbidden()
             return
         post_path = urlsplit(self.path).path
+        if post_path in ("/api/app/update/check", "/api/app/update/install"):
+            try:
+                if post_path.endswith("check"):
+                    UPDATER.check(force=True)
+                else:
+                    UPDATER.install()
+                self.send_json({"ok": True})
+            except RuntimeError as exc:
+                self.send_json({"ok": False, "error": str(exc)}, 400)
+            return
         if post_path.startswith("/api/recording-jobs/") and post_path.endswith("/cancel"):
             state = self.context.current_state()
             job_id = post_path[len("/api/recording-jobs/"):-len("/cancel")]
@@ -563,6 +576,7 @@ def main() -> int:
 
     if config["open_browser_on_start"] and not args.no_browser:
         threading.Timer(1.0, open_app_window, args=(local_url,)).start()
+    threading.Thread(target=_update_loop, name="eccam-update", daemon=True).start()
     try:
         server.serve_forever()
     except KeyboardInterrupt:
@@ -571,6 +585,35 @@ def main() -> int:
         context.close()
         server.server_close()
     return 0
+
+
+# ---------------------------------------------------------------------------
+# Botón «Actualizar»: versiones nuevas desde los Releases de github.com/cesarmugica/EC-Cam
+# ---------------------------------------------------------------------------
+def _installed_language() -> str:
+    with contextlib.suppress(OSError):
+        value = (HOME / "language.txt").read_text(encoding="utf-8").strip().lower()
+        if value in ("es", "en"):
+            return value
+    return "es"
+
+
+def _log(message: str) -> None:
+    print(f"{time.strftime('%Y-%m-%d %H:%M:%S')} {message}", flush=True)
+
+
+from eccam_update import Updater  # noqa: E402
+
+UPDATER = Updater(app="EC-Cam", repo="EC-Cam", tag_prefix="v", current=APP_VERSION, folder=HOME / "updates", log=_log,
+                  extra_args=lambda: [f"/LANG={_installed_language()}"])
+
+
+def _update_loop() -> None:
+    """EC-Cam se queda abierto días: buscar versión nueva al iniciar y luego cada 6 horas."""
+    time.sleep(15)
+    while True:
+        UPDATER.check()
+        time.sleep(6 * 3600 + 60)
 
 
 if __name__ == "__main__":

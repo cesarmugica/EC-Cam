@@ -34,6 +34,8 @@
     button.danger { background: var(--danger); border: 1px solid var(--danger); color: #fff; }
     button:disabled { cursor: wait; opacity: .58; transform: none; }
     .hidden { display: none !important; }
+    .update-banner { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; margin: 12px clamp(16px, 4vw, 44px) 0; padding: 12px 16px; border-radius: 12px; border: 1px solid var(--accent); background: color-mix(in srgb, var(--accent) 14%, var(--surface)); }
+    .update-banner.hidden { display: none; }
     .app-header { position: sticky; top: 0; z-index: 20; display: flex; align-items: center; justify-content: space-between; gap: 18px; min-height: 78px; padding: 13px clamp(16px, 4vw, 44px); border-bottom: 1px solid var(--border); background: var(--surface); }
     .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
     .brand-icon { width: 48px; height: 48px; border-radius: 14px; flex: 0 0 auto; object-fit: cover; box-shadow: 0 8px 22px var(--bg); }
@@ -181,6 +183,7 @@
     <div class="brand"><img class="brand-icon" src="/img/pwa-192.png" alt=""><div class="brand-copy"><h1>EC-Cam</h1><div class="brand-subtitle">Your Tapo cameras, live</div></div></div>
     <div id="account"><div id="state" aria-live="polite">Connecting…</div><div class="header-actions"><select id="langSelect" class="lang-select" title="Language / Idioma" aria-label="Language / Idioma"><option value="es">🌐 ES</option><option value="en">🌐 EN</option></select><button class="ghost" type="button" data-instalar style="display:none" title="Install “EC-Cam Web” as an app with its own window">⤓ Install app</button><button id="refreshButton" class="ghost icon-only hidden" type="button" title="Refresh cameras" aria-label="Refresh cameras">↻</button></div></div>
   </header>
+  <div id="updateBanner" class="update-banner hidden"><span id="updateText"></span><button id="updateButton" type="button">⬆ Update</button></div>
   <section id="loginView" class="login-wrap"><div class="login-card">
     <img class="login-brand" src="/img/pwa-192.png" alt=""><div id="credentialsView"><h2>Connect your Tapo account</h2><p>Sign in with your Tapo account email and password (the same as the phone app). The password is not stored: EC-Cam only keeps the session on this PC.</p>
       <form id="loginForm"><label for="username">Tapo account email</label><input id="username" type="email" autocomplete="username" required><label for="password">Tapo password</label><input id="password" type="password" autocomplete="current-password" required><button id="loginButton" type="submit">Connect</button></form><div id="loginError" class="login-error" aria-live="polite"></div>
@@ -188,7 +191,7 @@
     <div id="mfaView" class="hidden"><h2>Two-step verification</h2><p>Complete the verification requested by your Tapo account.</p><label for="mfaType">Verification method</label><select id="mfaType"></select><button id="requestMfaButton" type="button">Send code</button><label for="mfaCode">Verification code</label><input id="mfaCode" inputmode="numeric" autocomplete="one-time-code"><button id="verifyMfaButton" type="button" disabled>Verify code</button><button id="backLoginButton" class="secondary" type="button">Back</button><div id="mfaInfo" class="login-info" aria-live="polite"></div><div id="mfaError" class="login-error" aria-live="polite"></div></div>
   </div></section>
   <main id="appView" class="hidden"><div class="toolbar"><div><h2>Your cameras</h2><p id="cameraSummary">Loading cameras…</p></div><div class="toolbar-actions"><select id="qualitySelect" class="quality-select" title="Video quality" aria-label="Video quality"><option value="hd">HD quality</option><option value="sd">Light quality (SD)</option></select><button id="refreshMainButton" class="secondary" type="button">↻ Refresh</button><button id="cameraTestButton" class="secondary" type="button" title="Test your cameras and send a compatibility report">🧪 Test my cameras</button><button id="logoutButton" class="danger hidden" type="button" title="Sign out of Tapo on this PC">Sign out of Tapo</button></div></div><div class="stage"><section id="viewer" class="viewer"><div class="viewer-bar"><button id="prevCam" class="nav-btn" type="button" aria-label="Previous camera" title="Previous camera (←)">◀</button><div class="viewer-title"><strong id="viewerName"></strong><span id="viewerCount"></span></div><button id="nextCam" class="nav-btn" type="button" aria-label="Next camera" title="Next camera (→)">▶</button></div><div id="viewerCard"></div></section><aside class="tiles-wrap"><h3 class="tiles-title">All cameras</h3><div id="grid" class="tiles" aria-live="polite"></div></aside></div></main>
-  <footer class="app-footer">EC-Cam · video engine based on <a href="https://github.com/filirnd/topo" target="_blank" rel="noopener">Topo</a> (MIT license)</footer>
+  <footer class="app-footer"><button id="checkUpdate" class="link-button" type="button" style="background:none;padding:0;color:inherit;text-decoration:underline;font-weight:400">Check for updates</button> · EC-Cam · video engine based on <a href="https://github.com/filirnd/topo" target="_blank" rel="noopener">Topo</a> (MIT license)</footer>
   <section id="recordingsModal" class="recordings-modal hidden" role="dialog" aria-modal="true" aria-labelledby="recordingsTitle"><div class="recordings-panel"><header class="recordings-header"><div class="recordings-heading"><h2 id="recordingsTitle">Recordings</h2><p id="recordingsSubtitle">SD card timeline</p></div><button id="closeRecordingsButton" class="ghost" type="button">Close</button></header><div class="recordings-body"><div class="recordings-toolbar"><div><h3>Available days</h3><p>Times are shown in the camera's time zone.</p></div><button id="refreshRecordingsButton" class="secondary" type="button">↻ Refresh</button></div><div id="recordingsStatus" class="recordings-status" aria-live="polite">Loading recordings…</div><div id="recordingDays" class="recording-days"></div><div id="timelineCard" class="timeline-card hidden"><div id="timelineLoading" class="timeline-loading hidden" aria-live="polite">Loading timeline…</div><div class="timeline-topline"><strong id="timelineDate">Timeline</strong><span id="timelineSummary"></span></div><div class="timeline-hours"><span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span><span>24:00</span></div><div id="timelineTrack" class="timeline-track"></div><div class="timeline-legend"><span>Motion / event</span><span class="continuous">Continuous recording</span></div><div class="timeline-list-heading"><strong>Recorded segments</strong><span>Use the list when segments are close together.</span></div><div id="timelineSegmentList" class="timeline-segment-list"></div><div id="recordingSelection" class="recording-selection">Choose a segment to see its time and duration.</div><div id="recordingPlayerWrap" class="recording-player hidden"><video id="recordingPlayer" controls preload="metadata"></video></div></div></div></div></section>
   <section id="testModal" class="app-modal hidden" role="dialog" aria-modal="true" aria-labelledby="testTitle"><div class="app-modal-panel test-panel"><header><h2 id="testTitle">🧪 Test my cameras</h2><button class="ghost" type="button" data-close-test>Close</button></header><div class="app-modal-body"><p id="testStatus" class="meta" aria-live="polite"></p><div id="testTable" class="test-table"></div><div class="test-actions"><button id="testRunButton" type="button">▶ Start test</button></div><p class="meta test-privacy">🔒 The report only includes model, firmware, EC-Cam version and results: never your camera names or Tapo account data. It is sent through GitHub, so you need a GitHub account. The test never moves the cameras.</p><div id="testReports" class="test-reports"></div></div></div></section>
   <script>
@@ -905,6 +908,26 @@
     testModal.querySelector('[data-close-test]').addEventListener('click', closeCameraTest);
     testModal.addEventListener('click', event => { if (event.target === testModal) closeCameraTest(); });
     const qualitySelect = document.querySelector('#qualitySelect'); qualitySelect.value = liveVideo.quality(); qualitySelect.addEventListener('change', () => liveVideo.setGridQuality(qualitySelect.value));
+    const UPD = {'check': 'Check for updates', 'checking': 'Checking…', 'up': '✓ Up to date', 'fail': 'Check for updates (failed)', 'btn': '⬆ Update', 'new': 'A new version is available', 'have': 'you have', 'down': 'Downloading', 'inst': 'Installing', 'reopen': 'it will close and restart by itself; reload the page in a minute.'};
+    async function pollUpdate() {
+      let u = null;
+      try { u = await api('/api/app/update'); } catch (_) {}
+      if (u) {
+        const show = ['available', 'downloading', 'installing'].includes(u.state);
+        document.querySelector('#updateBanner').classList.toggle('hidden', !show);
+        document.querySelector('#checkUpdate').textContent = u.state === 'checking' ? UPD.checking : u.state === 'uptodate' ? UPD.up : u.state === 'error' ? UPD.fail : UPD.check;
+        if (show) {
+          document.querySelector('#updateText').textContent = u.state === 'downloading' ? `${UPD.down} EC-Cam ${u.latest}… ${u.percent != null ? u.percent + '%' : ''}`
+            : u.state === 'installing' ? `${UPD.inst} EC-Cam ${u.latest}… ${UPD.reopen}`
+            : `${UPD.new}: EC-Cam ${u.latest} (${UPD.have} ${u.current}).` + (u.error ? ' ⚠ ' + u.error : '');
+          document.querySelector('#updateButton').hidden = u.state !== 'available';
+        }
+      }
+      setTimeout(pollUpdate, u && ['checking', 'downloading', 'installing'].includes(u.state) ? 1000 : 60000);
+    }
+    document.querySelector('#updateButton').addEventListener('click', () => api('/api/app/update/install', {method: 'POST'}).then(pollUpdate).catch(error => alert(error.message)));
+    document.querySelector('#checkUpdate').addEventListener('click', () => api('/api/app/update/check', {method: 'POST'}).then(() => setTimeout(pollUpdate, 1000)).catch(() => {}));
+    pollUpdate();
     (async function init() {
       try {
         const session = await api('/api/app/session');
