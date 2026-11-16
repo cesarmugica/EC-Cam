@@ -2,6 +2,10 @@
 
 Cada versión tiene su instalador en [Releases](https://github.com/cesarmugica/EC-Cam/releases). La fecha y hora de cada compilación aparecen dentro de la app, debajo del nombre EC-Cam.
 
+## 2.4.1 — «Buscar actualización» a la vista / "Check for updates" in sight
+- El botón **⬆ Buscar actualización** ahora está arriba, junto al idioma (antes era un enlace chiquito en el pie de página), igual que en EC-Tok y EC-Tube. Abajo se ve la versión instalada.
+- *EN:* The **⬆ Check for updates** button is now at the top, next to the language (it used to be a small link at the bottom), like in EC-Tok and EC-Tube. The installed version is shown at the bottom.
+
 ## 2.4.0 — Botón «Actualizar» / "Update" button
 - EC-Cam busca versión nueva al iniciar y cada 6 horas. Si hay, muestra **⬆ Actualizar** arriba: la baja de los Releases de este repo, revisa que no venga dañada (SHA-256), se instala en silencio (en tu idioma) y el servicio vuelve a arrancar solo. Sin pasar por Edge, así que ya no sale el aviso de «no se descarga comúnmente». Las versiones marcadas ⚠️ (como la 2.3.0) se ignoran.
 - «Buscar actualización» abajo, junto a la versión.
