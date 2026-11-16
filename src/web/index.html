@@ -925,7 +925,23 @@
           document.querySelector('#updateButton').hidden = u.state !== 'available';
         }
       }
+      if (u && u.state === 'installing') wasInstalling = u.current;
+      if (!u && wasInstalling) { afterInstall(); return; }
       setTimeout(pollUpdate, u && ['checking', 'downloading', 'installing'].includes(u.state) ? 1000 : 60000);
+    }
+    // EC-Cam se cerró para actualizarse: cerrar esta ventana; si Edge no lo deja, esperar a la versión nueva y recargarse con ella
+    // (la nueva no abre otra ventana si esta sigue viva).
+    let wasInstalling = '';
+    function afterInstall() {
+      const old = wasInstalling; wasInstalling = '';
+      document.querySelector('#updateText').textContent = 'Instalando la versión nueva… esta ventana se cierra sola.';
+      setTimeout(() => window.close(), 1500);
+      const t0 = Date.now();
+      const tick = async () => {
+        try { const r = await fetch('/api/app/update', {cache: 'no-store'}); if (r.ok) { const d = await r.json(); if (d.current && d.current !== old) { location.reload(); return; } } } catch (_) {}
+        if (Date.now() - t0 < 180000) setTimeout(tick, 1000);
+      };
+      setTimeout(tick, 2500);
     }
     document.querySelector('#updateButton').addEventListener('click', () => api('/api/app/update/install', {method: 'POST'}).then(pollUpdate).catch(error => alert(error.message)));
     document.querySelector('#checkUpdate').addEventListener('click', () => api('/api/app/update/check', {method: 'POST'}).then(() => setTimeout(pollUpdate, 1000)).catch(() => {}));

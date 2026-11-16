@@ -34,7 +34,7 @@ from http.server import ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
-APP_VERSION = "2.4.1"
+APP_VERSION = "2.4.2"
 try:  # fecha del instalador, la escribe windows/build.ps1
     from eccam_build import BUILD_DATE  # type: ignore[import-not-found]
 except ImportError:
@@ -180,6 +180,9 @@ def _app_browser() -> str | None:
     return None
 
 
+LAST_PAGE = 0.0  # última vez que una ventana de EC-Cam preguntó por actualizaciones
+
+
 def open_app_window(url: str) -> None:
     """Abrir EC-Cam en su propia ventana (modo aplicación, sin barra ni pestañas).
 
@@ -314,6 +317,8 @@ class EcCamHandler(engine.Handler):
             })
             return
         if path == "/api/app/update":
+            global LAST_PAGE
+            LAST_PAGE = time.time()  # hay una ventana de EC-Cam abierta
             self.send_json(UPDATER.public())
             return
         if path == "/api/app/stream-status":
@@ -543,6 +548,7 @@ def main() -> int:
     parser.add_argument("--port", type=int, help=f"puerto (por defecto {DEFAULT_PORT})")
     parser.add_argument("--fresh-login", action="store_true", help="olvidar la sesión de Tapo guardada")
     parser.add_argument("--no-browser", action="store_true", help="no abrir el navegador al iniciar")
+    parser.add_argument("--after-update", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument("--version", action="version", version=f"EC-Cam {APP_VERSION} {BUILD_DATE}".strip())
     args = parser.parse_args()
 
@@ -574,7 +580,12 @@ def main() -> int:
     if not os.environ.get("TOPO_FFMPEG"):
         print("AVISO: no se encontró FFmpeg; el video en vivo no funcionará.", flush=True)
 
-    if config["open_browser_on_start"] and not args.no_browser:
+    if args.after_update and not args.no_browser:
+        # Tras actualizar: si la ventana vieja no se pudo cerrar, se recarga sola con esta versión;
+        # solo abrir una nueva si en unos segundos ninguna se reporta.
+        started = time.time()
+        threading.Timer(6, lambda: None if LAST_PAGE > started else open_app_window(local_url)).start()
+    elif config["open_browser_on_start"] and not args.no_browser:
         threading.Timer(1.0, open_app_window, args=(local_url,)).start()
     threading.Thread(target=_update_loop, name="eccam-update", daemon=True).start()
     try:

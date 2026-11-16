@@ -2,6 +2,10 @@
 
 Cada versión tiene su instalador en [Releases](https://github.com/cesarmugica/EC-Cam/releases). La fecha y hora de cada compilación aparecen dentro de la app, debajo del nombre EC-Cam.
 
+## 2.4.2 — Al actualizar ya no se queda la ventana vieja / Old window no longer stays after updating
+- Al darle **⬆ Actualizar**, la versión vieja se cierra sola en cuanto arranca el instalador y su ventana también se cierra. Si Edge no deja cerrarla, se recarga sola con la versión nueva y no se abre una segunda ventana.
+- *EN:* When you click **⬆ Update**, the old version closes as soon as the installer starts, and so does its window. If Edge doesn't allow closing it, it reloads with the new version and no second window opens.
+
 ## 2.4.1 — «Buscar actualización» a la vista / "Check for updates" in sight
 - El botón **⬆ Buscar actualización** ahora está arriba, junto al idioma (antes era un enlace chiquito en el pie de página), igual que en EC-Tok y EC-Tube. Abajo se ve la versión instalada.
 - *EN:* The **⬆ Check for updates** button is now at the top, next to the language (it used to be a small link at the bottom), like in EC-Tok and EC-Tube. The installed version is shown at the bottom.

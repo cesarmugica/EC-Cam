@@ -81,7 +81,7 @@ Name: "{userstartup}\Servicio EC-Cam"; Filename: "{app}\eccam-server.exe"; Param
 ; Siempre arrancar el servicio al terminar (antes dependía de una casilla).
 Filename: "{app}\eccam-server.exe"; Flags: nowait skipifsilent
 ; Actualización desde la app (instalador en silencio): volver a arrancar EC-Cam al terminar.
-Filename: "{app}\eccam-server.exe"; Flags: nowait; Check: WizardSilent
+Filename: "{app}\eccam-server.exe"; Parameters: "--after-update"; Flags: nowait; Check: WizardSilent
 
 [Registry]
 ; Enlace eccam:// para el botón "Iniciar EC-Cam" de la página (por usuario, sin admin).
